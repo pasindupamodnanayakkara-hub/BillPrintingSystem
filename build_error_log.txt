@@ -1,0 +1,52 @@
+
+> billprintingsystem@0.0.1 electron:build
+> npm run build && electron-builder --windows
+
+
+> billprintingsystem@0.0.1 build
+> vite build
+
+[36mvite v8.0.8 [32mbuilding client environment for production...[36m[39m
+[2Ktransforming...✓ 1736 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/manifest.webmanifest                          0.18 kB
+dist/index.html                                    0.54 kB │ gzip:  0.33 kB
+dist/assets/dr_event_logo-CmRngkPw.png            20.82 kB
+dist/assets/logo-CMnIPAP1.png                    123.03 kB
+dist/assets/index-7dOwKgZ0.css                    31.97 kB │ gzip:  6.55 kB
+dist/assets/workbox-window.prod.es5-Bq4GJJid.js    5.74 kB │ gzip:  2.25 kB
+dist/assets/index-2mBrvj80.js                    238.76 kB │ gzip: 72.10 kB
+
+[32m✓ built in 693ms[39m
+
+PWA v1.2.0
+mode      generateSW
+precache  9 entries (425.24 KiB)
+files generated
+  dist/sw.js
+  dist/workbox-1ef09536.js
+  • electron-builder  version=26.8.1 os=10.0.19045
+  • loaded configuration  file=package.json ("build" field)
+  • description is missed in the package.json  appPackageFile=C:\Users\Pasindu\OneDrive\Desktop\Projects\BillPrintingSystem\package.json
+  ⨯ Invalid configuration object. electron-builder 26.8.1 has been initialized using a configuration object that does not match the API schema.
+ - configuration.win has an unknown property 'publisherName'. These properties are valid:
+   object { appId?, artifactName?, asar?, asarUnpack?, azureSignOptions?, compression?, cscKeyPassword?, cscLink?, defaultArch?, detectUpdateChannel?, disableDefaultIgnoredFiles?, electronLanguages?, electronUpdaterCompatibility?, executableName?, extraFiles?, extraResources?, fileAssociations?, files?, forceCodeSigning?, generateUpdatesFilesForAllChannels?, icon?, legalTrademarks?, protocols?, publish?, releaseInfo?, requestedExecutionLevel?, signAndEditExecutable?, signExts?, signtoolOptions?, target?, verifyUpdateCodeSignature? }
+     How to fix:
+     1. Open https://www.electron.build/win
+     2. Search the option name on the page (or type in into Search to find across the docs).
+       * Not found? The option was deprecated or not exists (check spelling).
+       * Found? Check that the option in the appropriate place. e.g. "title" only in the "dmg", not in the root.
+  failedTask=build stackTrace=ValidationError: Invalid configuration object. electron-builder 26.8.1 has been initialized using a configuration object that does not match the API schema.
+ - configuration.win has an unknown property 'publisherName'. These properties are valid:
+   object { appId?, artifactName?, asar?, asarUnpack?, azureSignOptions?, compression?, cscKeyPassword?, cscLink?, defaultArch?, detectUpdateChannel?, disableDefaultIgnoredFiles?, electronLanguages?, electronUpdaterCompatibility?, executableName?, extraFiles?, extraResources?, fileAssociations?, files?, forceCodeSigning?, generateUpdatesFilesForAllChannels?, icon?, legalTrademarks?, protocols?, publish?, releaseInfo?, requestedExecutionLevel?, signAndEditExecutable?, signExts?, signtoolOptions?, target?, verifyUpdateCodeSignature? }
+     How to fix:
+     1. Open https://www.electron.build/win
+     2. Search the option name on the page (or type in into Search to find across the docs).
+       * Not found? The option was deprecated or not exists (check spelling).
+       * Found? Check that the option in the appropriate place. e.g. "title" only in the "dmg", not in the root.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      at validate (C:\Users\Pasindu\OneDrive\Desktop\Projects\BillPrintingSystem\node_modules\@develar\schema-utils\dist\validate.js:86:11)
+    at validateConfiguration (C:\Users\Pasindu\OneDrive\Desktop\Projects\BillPrintingSystem\node_modules\app-builder-lib\src\util\config\config.ts:239:3)
+    at Packager.validateConfig (C:\Users\Pasindu\OneDrive\Desktop\Projects\BillPrintingSystem\node_modules\app-builder-lib\src\packager.ts:398:5)
+    at Packager.build (C:\Users\Pasindu\OneDrive\Desktop\Projects\BillPrintingSystem\node_modules\app-builder-lib\src\packager.ts:406:5)
+    at executeFinally (C:\Users\Pasindu\OneDrive\Desktop\Projects\BillPrintingSystem\node_modules\builder-util\src\promise.ts:12:14)
