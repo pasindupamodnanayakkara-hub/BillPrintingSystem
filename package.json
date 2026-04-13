@@ -1,7 +1,7 @@
 {
   "name": "billprintingsystem",
   "private": true,
-  "version": "1.0.2",
+  "version": "1.0.3",
   "type": "module",
   "main": "electron-main.cjs",
   "author": "Infixa Digital",
@@ -43,7 +43,8 @@
       {
         "provider": "github",
         "owner": "pasindupamodnanayakkara-hub",
-        "repo": "BillPrintingSystem"
+        "repo": "BillPrintingSystem",
+        "releaseType": "release"
       }
     ]
   },
