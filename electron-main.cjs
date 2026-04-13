@@ -64,26 +64,31 @@ app.on('window-all-closed', () => {
   }
 });
 
-// Auto-Updater Events (Visible to User)
-autoUpdater.on('update-available', () => {
-  dialog.showMessageBox(mainWindow, {
-    type: 'info',
-    title: 'Update Available',
-    message: 'A new update was found in the cloud and is downloading now...'
-  });
+// Auto-Updater Events (IPC to React)
+autoUpdater.on('checking-for-update', () => {
+  if (mainWindow) mainWindow.webContents.send('updater-event', { type: 'checking' });
 });
 
-autoUpdater.on('update-downloaded', () => {
-  dialog.showMessageBox(mainWindow, {
-    type: 'question',
-    buttons: ['Install and Relaunch Now', 'Install Later'],
-    defaultId: 0,
-    title: 'Update Ready',
-    message: 'The new update is downloaded and ready to install!',
-    detail: 'Would you like to install it and restart the software now?'
-  }).then((result) => {
-    if (result.response === 0) {
-      autoUpdater.quitAndInstall();
-    }
-  });
+autoUpdater.on('update-available', (info) => {
+  if (mainWindow) mainWindow.webContents.send('updater-event', { type: 'update-available', info });
+});
+
+autoUpdater.on('update-not-available', (info) => {
+  if (mainWindow) mainWindow.webContents.send('updater-event', { type: 'update-not-available', info });
+});
+
+autoUpdater.on('download-progress', (progressObj) => {
+  if (mainWindow) mainWindow.webContents.send('updater-event', { type: 'download-progress', progress: progressObj });
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  if (mainWindow) mainWindow.webContents.send('updater-event', { type: 'update-downloaded', info });
+});
+
+autoUpdater.on('error', (err) => {
+  if (mainWindow) mainWindow.webContents.send('updater-event', { type: 'error', error: err == null ? "unknown" : (err.message || err.toString()) });
+});
+
+ipcMain.on('install-update', () => {
+  autoUpdater.quitAndInstall(true, true);
 });

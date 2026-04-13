@@ -4,6 +4,7 @@ import Settings from './components/Settings';
 import TitleBar from './components/TitleBar';
 import ReloadPrompt from './components/ReloadPrompt';
 import { FileText, Settings as SettingsIcon } from 'lucide-react';
+import UpdateOverlay from './components/UpdateOverlay';
 
 function App() {
   const [activeTab, setActiveTab] = useState('generator');
@@ -11,6 +12,7 @@ function App() {
   return (
     <div className="h-full w-full bg-[#f3f4f6] flex flex-col overflow-hidden">
       <TitleBar />
+      <UpdateOverlay />
       <ReloadPrompt />
       {/* Navigation Bar */}
       <nav className="bg-white border-b border-gray-200 px-8 py-3 flex justify-between items-center shadow-sm z-20 shrink-0">
