@@ -1,0 +1,77 @@
+{
+  "name": "billprintingsystem",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "main": "electron-main.cjs",
+  "author": "Infixa Digital",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "electron:start": "electron .",
+    "electron:build": "npm run build && electron-builder --windows",
+    "electron:publish": "npm run build && electron-builder --windows --publish always"
+  },
+  "build": {
+    "appId": "com.drstudio.billprintingsystem",
+    "productName": "Bill Studio",
+    "copyright": "Copyright © 2026 Infixa Digital",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron-main.cjs"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "publisherName": "Infixa Digital"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
+      "license": "build/license.txt",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Bill Studio"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "pasindupamodnanayakkara-hub",
+        "repo": "BillPrintingSystem"
+      }
+    ]
+  },
+  "dependencies": {
+    "@react-oauth/google": "^0.13.5",
+    "@tailwindcss/postcss": "^4.2.2",
+    "@tailwindcss/vite": "^4.2.2",
+    "autoprefixer": "^10.4.27",
+    "electron-updater": "^6.8.3",
+    "lucide-react": "^1.8.0",
+    "postcss": "^8.5.9",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "tailwindcss": "^4.2.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "electron": "^41.2.0",
+    "electron-builder": "^26.8.1",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.4.0",
+    "vite": "^8.0.4",
+    "vite-plugin-pwa": "^1.2.0"
+  }
+}

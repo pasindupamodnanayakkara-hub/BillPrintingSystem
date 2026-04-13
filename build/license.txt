@@ -1,0 +1,16 @@
+END USER LICENSE AGREEMENT (EULA)
+
+BILL PRINTING SYSTEM - PROFESSIONAL STUDIO BILLING SOFTWARE
+
+IMPORTANT-READ CAREFULLY: By clicking the "I Agree" button, you agree to be bound by the terms of this End-User License Agreement ("EULA"). If you do not agree to the terms of this EULA, do not install or use the Software.
+
+1. GRANT OF LICENSE
+This EULA grants you the right to install and use the Software on your computer for professional billing operations.
+
+2. CLOUD UPDATES
+The Software contains an auto-update feature that communicates with the Cloud to check for software updates. By using this software, you consent to these network communications and silent background update downloads. 
+
+3. OWNERSHIP
+This software is provided "as is" and remains the property of the developers.
+
+Enjoy your Professional Studio Setup!
