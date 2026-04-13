@@ -28,8 +28,7 @@
     "win": {
       "target": [
         "nsis"
-      ],
-      "publisherName": "Infixa Digital"
+      ]
     },
     "nsis": {
       "oneClick": false,
