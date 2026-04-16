@@ -1,13 +1,6 @@
 import React from 'react';
-import { Minus, Square, X } from 'lucide-react';
 
 const TitleBar = () => {
-  const handleWindowControl = (action) => {
-    if (typeof window !== 'undefined' && window.require) {
-      window.require('electron').ipcRenderer.send(action);
-    }
-  };
-
   return (
     <div className="h-10 bg-gray-900 flex justify-between items-center select-none shadow-md border-b border-gray-800" style={{ WebkitAppRegion: 'drag' }}>
       {/* App Info */}
@@ -18,18 +11,11 @@ const TitleBar = () => {
         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Studio Darkroom | Bill Printing System</span>
       </div>
 
-      {/* Window Controls */}
-      <div className="flex h-full no-drag" style={{ WebkitAppRegion: 'no-drag' }}>
-        <button onClick={() => handleWindowControl('minimize-window')} className="px-4 h-full flex items-center justify-center hover:bg-gray-800 transition-colors group">
-          <Minus size={14} className="text-gray-400 group-hover:text-white" />
-        </button>
-        <button onClick={() => handleWindowControl('maximize-window')} className="px-4 h-full flex items-center justify-center hover:bg-gray-800 transition-colors group">
-          <Square size={10} className="text-gray-400 group-hover:text-white" />
-        </button>
-        <button onClick={() => handleWindowControl('close-window')} className="px-4 h-full flex items-center justify-center hover:bg-red-600 transition-colors group">
-          <X size={14} className="text-gray-400 group-hover:text-white" />
-        </button>
-      </div>
+      {/* 
+          Native Window Controls are overlaid here by Windows 10/11 
+          (titleBarOverlay enabled in electron-main.cjs)
+      */}
+      <div className="w-[140px]" /> 
     </div>
   );
 };

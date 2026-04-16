@@ -88,3 +88,47 @@ export const backupToSheets = async (accessToken, billData) => {
     throw error;
   }
 };
+
+/**
+ * Fetches all bills from the "Studio_Bills_Backup" spreadsheet.
+ */
+export const fetchBillsFromSheets = async (accessToken) => {
+  try {
+    const searchResponse = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=name='Studio_Bills_Backup' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+    const searchData = await searchResponse.json();
+    
+    if (!searchData.files || searchData.files.length === 0) {
+      return [];
+    }
+    
+    const spreadsheetId = searchData.files[0].id;
+    const valuesResponse = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Sheet1!A2:G?valueRenderOption=FORMATTED_VALUE`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+    const valuesData = await valuesResponse.json();
+    
+    if (!valuesData.values) return [];
+    
+    // Map rows back to bill objects
+    return valuesData.values.map(row => ({
+      timestamp: row[0],
+      invoiceNumber: row[1],
+      invoiceDate: row[2],
+      clientName: row[3],
+      subtotal: parseFloat(String(row[4]).replace(/[^0-9.-]+/g, "")),
+      taxAmount: parseFloat(String(row[5]).replace(/[^0-9.-]+/g, "")),
+      total: parseFloat(String(row[6]).replace(/[^0-9.-]+/g, "")),
+    }));
+  } catch (error) {
+    console.error('Error fetching from Google Sheets:', error);
+    throw error;
+  }
+};

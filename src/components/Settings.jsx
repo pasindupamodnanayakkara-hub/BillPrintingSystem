@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getProfiles, addProfile, updateProfile, deleteProfile } from '../config/profiles';
-import { Trash2, Plus, Save, Building2, Mail, Phone, MapPin, Image as ImageIcon } from 'lucide-react';
+import { getInventory, saveInventory, addItem, updateItem, deleteItem } from '../services/inventoryService';
+import { Settings as SettingsIcon, Trash2, Plus, Save, Building2, Mail, Phone, MapPin, Image as ImageIcon, Briefcase } from 'lucide-react';
 
 const Settings = () => {
   const [profiles, setProfiles] = useState([]);
@@ -12,10 +13,30 @@ const Settings = () => {
     address: '',
     logo: ''
   });
+  
+  const [appSettings, setAppSettings] = useState({
+    invoicePrefix: 'INV-',
+    invoiceCounter: '1000',
+    backupFrequency: 'Never'
+  });
+
+  const [isDragging, setIsDragging] = useState(false);
+  const [inventory, setInventory] = useState([]);
+  const [editingItem, setEditingItem] = useState(null);
+  const [itemForm, setItemForm] = useState({ name: '', price: '' });
 
   useEffect(() => {
     const loadedProfiles = getProfiles();
     setProfiles(loadedProfiles);
+    
+    const savedSettings = JSON.parse(localStorage.getItem('BILL_STUDIO_SETTINGS') || '{}');
+    const savedCounter = localStorage.getItem('BILL_COUNTER') || '1000';
+    setAppSettings({
+      invoicePrefix: savedSettings.invoicePrefix || 'INV-',
+      invoiceCounter: savedCounter,
+      backupFrequency: savedSettings.backupFrequency || 'Never'
+    });
+    setInventory(getInventory());
   }, []);
 
   const handleEdit = (profile) => {
@@ -24,15 +45,29 @@ const Settings = () => {
   };
 
   const handleSave = () => {
-    let updated;
-    if (editingId) {
-      updated = updateProfile(editingId, formData);
-    } else {
-      updated = addProfile(formData);
+    if (editingId === 'system') {
+      localStorage.setItem('BILL_STUDIO_SETTINGS', JSON.stringify({
+        invoicePrefix: appSettings.invoicePrefix,
+        backupFrequency: appSettings.backupFrequency
+      }));
+      localStorage.setItem('BILL_COUNTER', appSettings.invoiceCounter);
+      setEditingId(null);
+      alert('System settings saved!');
+      return;
     }
-    setProfiles(updated);
-    setEditingId(null);
-    setFormData({ name: '', email: '', phone: '', address: '', logo: '' });
+
+    let updated;
+    if (editingId === 'new') {
+      updated = addProfile(formData);
+    } else if (editingId) {
+      updated = updateProfile(editingId, formData);
+    }
+
+    if (updated) {
+      setProfiles(updated);
+      setEditingId(null);
+      setFormData({ name: '', email: '', phone: '', address: '', logo: '' });
+    }
   };
 
   const handleDelete = (id) => {
@@ -47,25 +82,69 @@ const Settings = () => {
     setFormData({ name: '', email: '', phone: '', address: '', logo: '' });
   };
 
+  const handleLogoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, logo: reader.result });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, logo: reader.result });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
-    <div className="max-w-4xl mx-auto p-8 h-full overflow-y-auto">
+    <div className="h-full overflow-y-auto custom-scrollbar">
+      <div className="max-w-4xl mx-auto p-8">
       <div className="flex justify-between items-center mb-8">
         <div>
           <h2 className="text-3xl font-black text-gray-900 tracking-tight italic">BUSINESS SETTINGS</h2>
           <p className="text-gray-500 font-medium">Manage your studio identities and billing details</p>
         </div>
-        {!editingId && (
+        <div className="flex gap-3">
           <button 
-            onClick={() => setEditingId('new')}
-            className="flex items-center gap-2 bg-black text-white px-6 py-3 rounded-2xl font-bold hover:bg-gray-900 transition-all shadow-lg active:scale-95"
+            onClick={() => setEditingId('system')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all shadow-lg active:scale-95 ${editingId === 'system' ? 'bg-accent-gold text-white' : 'bg-white text-gray-700 border border-gray-100 hover:border-accent-gold'}`}
           >
-            <Plus size={18} />
-            Add New Business
+            <SettingsIcon size={18} />
+            System Settings
           </button>
-        )}
+          {!editingId && (
+            <button 
+              onClick={() => setEditingId('new')}
+              className="flex items-center gap-2 bg-black text-white px-6 py-3 rounded-2xl font-bold hover:bg-gray-900 transition-all shadow-lg active:scale-95"
+            >
+              <Plus size={18} />
+              Add New Business
+            </button>
+          )}
+        </div>
       </div>
 
-      {(editingId === 'new' || editingId) && (
+      {/* Business Profile Editor */}
+      {(editingId === 'new' || (editingId && editingId !== 'system')) && (
         <div className="bg-white border border-gray-200 rounded-3xl p-8 shadow-2xl mb-12 animate-in fade-in slide-in-from-top-4 duration-300">
           <h3 className="text-xl font-black text-gray-800 mb-6 uppercase tracking-widest italic">
             {editingId === 'new' ? 'New Business Profile' : 'Edit Business Profile'}
@@ -131,16 +210,41 @@ const Settings = () => {
               </div>
 
               <div className="relative">
-                <label className="text-[10px] absolute -top-2 left-3 bg-white px-1 font-bold text-gray-400 z-10 uppercase tracking-wider">Logo URL / Path</label>
-                <div className="flex items-center gap-3 border border-gray-200 rounded-xl px-4 py-3 focus-within:border-accent-gold transition-colors">
-                  <ImageIcon size={16} className="text-gray-400" />
+                <label className="text-[10px] absolute -top-2 left-3 bg-white px-1 font-bold text-gray-400 z-10 uppercase tracking-wider">Business Logo</label>
+                <div 
+                  className={`border-2 border-dashed rounded-2xl p-4 transition-all flex flex-col items-center justify-center gap-2 cursor-pointer
+                    ${isDragging ? 'border-accent-gold bg-yellow-50' : 'border-gray-200 hover:border-accent-gold bg-gray-50'}
+                    ${formData.logo ? 'h-32' : 'h-32'}`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={() => document.getElementById('logoInput').click()}
+                >
                   <input 
-                    type="text" 
-                    className="w-full text-sm outline-none font-medium"
-                    placeholder="/src/assets/logo.png"
-                    value={formData.logo}
-                    onChange={(e) => setFormData({...formData, logo: e.target.value})}
+                    id="logoInput"
+                    type="file" 
+                    className="hidden" 
+                    accept="image/*"
+                    onChange={handleLogoUpload}
                   />
+                  {formData.logo ? (
+                    <div className="relative group w-full h-full flex items-center justify-center">
+                      <img src={formData.logo} alt="Logo Preview" className="max-h-full object-contain" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
+                        <p className="text-[10px] text-white font-bold uppercase tracking-wider">Change Image</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-gray-400">
+                        <ImageIcon size={20} />
+                      </div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">
+                        <span className="text-gray-600">Click to upload</span> or drag and drop<br/>
+                        PNG, JPG up to 2MB
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -155,11 +259,54 @@ const Settings = () => {
             </button>
             <button 
               onClick={handleSave}
-              className="flex items-center gap-2 bg-accent-gold text-white px-8 py-3 rounded-2xl font-bold hover:brightness-110 transition-all shadow-lg active:scale-95"
+              className="flex items-center gap-2 bg-black text-white px-8 py-3 rounded-2xl font-bold hover:bg-gray-800 transition-all shadow-lg active:scale-95"
             >
               <Save size={18} />
-              Save Settings
+              Save Changes
             </button>
+          </div>
+        </div>
+      )}
+
+      {editingId === 'system' && (
+        <div className="bg-white border border-gray-200 rounded-3xl p-8 shadow-2xl mb-12 animate-in fade-in slide-in-from-top-4 duration-300">
+          <h3 className="text-xl font-black text-gray-800 mb-6 uppercase tracking-widest italic">System Configuration</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="relative">
+              <label className="text-[10px] absolute -top-2 left-3 bg-white px-1 font-bold text-gray-400 z-10 uppercase tracking-wider">Invoice Prefix</label>
+              <input 
+                type="text" 
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-black focus:border-accent-gold outline-none"
+                value={appSettings.invoicePrefix}
+                onChange={(e) => setAppSettings({...appSettings, invoicePrefix: e.target.value.toUpperCase()})}
+              />
+            </div>
+            <div className="relative">
+              <label className="text-[10px] absolute -top-2 left-3 bg-white px-1 font-bold text-gray-400 z-10 uppercase tracking-wider">Next Invoice #</label>
+              <input 
+                type="number" 
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-black focus:border-accent-gold outline-none"
+                value={appSettings.invoiceCounter}
+                onChange={(e) => setAppSettings({...appSettings, invoiceCounter: e.target.value})}
+              />
+            </div>
+            <div className="relative">
+              <label className="text-[10px] absolute -top-2 left-3 bg-white px-1 font-bold text-gray-400 z-10 uppercase tracking-wider">Backup Frequency</label>
+              <select 
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold focus:border-accent-gold outline-none bg-white appearance-none"
+                value={appSettings.backupFrequency}
+                onChange={(e) => setAppSettings({...appSettings, backupFrequency: e.target.value})}
+              >
+                <option>Never</option>
+                <option>Daily</option>
+                <option>Weekly</option>
+                <option>Monthly</option>
+              </select>
+            </div>
+          </div>
+          <div className="mt-8 flex gap-4 justify-end">
+            <button onClick={resetForm} className="px-6 py-3 text-sm font-bold text-gray-500">Cancel</button>
+            <button onClick={handleSave} className="bg-black text-white px-8 py-3 rounded-2xl font-bold shadow-lg">Save Settings</button>
           </div>
         </div>
       )}
@@ -204,6 +351,74 @@ const Settings = () => {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="mt-12 bg-white border border-gray-200 rounded-3xl p-8 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-black text-gray-800 uppercase tracking-widest italic">Item Library (Default Pricing)</h3>
+          <button 
+            onClick={() => setEditingItem('new')}
+            className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-gray-800"
+          >
+            <Plus size={14} /> Add Predefined Item
+          </button>
+        </div>
+
+        {editingItem && (
+          <div className="bg-gray-50 rounded-2xl p-6 mb-8 border border-gray-100 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <input 
+              type="text" 
+              placeholder="Item name (e.g. Wedding Shoot)"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold outline-none bg-white"
+              value={itemForm.name}
+              onChange={(e) => setItemForm({...itemForm, name: e.target.value})}
+            />
+            <input 
+              type="number" 
+              placeholder="Price"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold outline-none bg-white"
+              value={itemForm.price}
+              onChange={(e) => setItemForm({...itemForm, price: e.target.value})}
+            />
+            <div className="flex gap-3">
+              <button 
+                onClick={() => {
+                  if (editingItem === 'new') {
+                    setInventory(addItem(itemForm));
+                  } else {
+                    setInventory(updateItem(editingItem, itemForm));
+                  }
+                  setEditingItem(null);
+                  setItemForm({ name: '', price: '' });
+                }}
+                className="flex-1 bg-black text-white rounded-xl font-bold py-3 text-sm"
+              >
+                Save Item
+              </button>
+              <button onClick={() => setEditingItem(null)} className="text-gray-400 font-bold px-4">Cancel</button>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {inventory.map(item => (
+            <div key={item.id} className="bg-white border border-gray-100 rounded-2xl p-4 flex justify-between items-center group">
+              <div>
+                <p className="text-sm font-black text-gray-800 italic">{item.name}</p>
+                <p className="text-[10px] text-accent-gold font-black tracking-widest uppercase">Rs. {item.price}</p>
+              </div>
+              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={() => { setEditingItem(item.id); setItemForm({ name: item.name, price: item.price }); }} className="text-gray-400 hover:text-black">
+                  <Briefcase size={14} />
+                </button>
+                <button onClick={() => setInventory(deleteItem(item.id))} className="text-red-400 hover:text-red-600">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
       </div>
     </div>
   );
