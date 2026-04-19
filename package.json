@@ -58,21 +58,19 @@
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.5",
-    "@tailwindcss/postcss": "^4.2.2",
-    "@tailwindcss/vite": "^4.2.2",
-    "autoprefixer": "^10.4.27",
     "electron-updater": "^6.8.3",
     "lucide-react": "^1.8.0",
-    "postcss": "^8.5.9",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "tailwindcss": "^4.2.2"
+    "react-dom": "^19.2.4"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@tailwindcss/postcss": "^4.2.2",
+    "@tailwindcss/vite": "^4.2.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "autoprefixer": "^10.4.27",
     "electron": "^41.2.0",
     "electron-builder": "^26.8.1",
     "eslint": "^9.39.4",
@@ -81,6 +79,8 @@
     "globals": "^17.4.0",
     "jimp": "^1.6.1",
     "png-to-ico": "^3.0.1",
+    "postcss": "^8.5.9",
+    "tailwindcss": "^4.2.2",
     "vite": "^8.0.4",
     "vite-plugin-pwa": "^1.2.0"
   }

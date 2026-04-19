@@ -10,6 +10,16 @@ html, body, #root {
   overflow: hidden;
 }
 
+#root {
+  zoom: 0.8; /* Reduce UI size by 20% globally */
+}
+
+@media print {
+  #root {
+    zoom: normal !important; /* Ensure printing remains at 100% scale for A4/A5 */
+  }
+}
+
 :root {
   font-family: 'Outfit', 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
 }

@@ -48,63 +48,109 @@ ipcMain.on('close-window', () => {
 
 // ─── Google OAuth IPC Handler ────────────────────────────────────────────────
 ipcMain.handle('google-oauth', async (event, { clientId, silent = false }) => {
-  const redirectUri = 'http://localhost';
   const scope = [
     'https://www.googleapis.com/auth/spreadsheets',
     'https://www.googleapis.com/auth/drive.file',
   ].join(' ');
 
-  let authUrl =
-    `https://accounts.google.com/o/oauth2/v2/auth` +
-    `?client_id=${encodeURIComponent(clientId)}` +
-    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-    `&response_type=token` +
-    `&scope=${encodeURIComponent(scope)}`;
-    
+  // Silent Auth stays in internal window to avoid popping browser
   if (silent) {
-    authUrl += `&prompt=none`;
-  } else {
-    authUrl += `&prompt=select_account`;
+    const redirectUri = 'http://localhost';
+    let authUrl =
+      `https://accounts.google.com/o/oauth2/v2/auth` +
+      `?client_id=${encodeURIComponent(clientId)}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&response_type=token` +
+      `&scope=${encodeURIComponent(scope)}` +
+      `&prompt=none`;
+
+    return new Promise((resolve, reject) => {
+      const authWin = new BrowserWindow({
+        width: 500,
+        height: 650,
+        parent: mainWindow,
+        show: false,
+        autoHideMenuBar: true,
+        webPreferences: { nodeIntegration: false, contextIsolation: true },
+      });
+      authWin.loadURL(authUrl);
+      const handleNav = (url) => {
+        if (url.startsWith(redirectUri)) {
+          const fragment = new URL(url.replace('#', '?')).searchParams;
+          const token = fragment.get('access_token');
+          authWin.destroy();
+          if (token) resolve(token);
+          else reject(new Error('Silent auth failed'));
+        }
+      };
+      authWin.webContents.on('will-redirect', (e, url) => handleNav(url));
+      authWin.webContents.on('will-navigate', (e, url) => handleNav(url));
+      setTimeout(() => { if (!authWin.isDestroyed()) { authWin.destroy(); reject(new Error('Timeout')); } }, 10000);
+    });
   }
 
+  // Interactive Auth: Use System Browser with Loopback Server
   return new Promise((resolve, reject) => {
-    const authWin = new BrowserWindow({
-      width: 500,
-      height: 650,
-      parent: mainWindow,
-      modal: !silent,
-      show: !silent,
-      autoHideMenuBar: true,
-      webPreferences: { nodeIntegration: false, contextIsolation: true },
-    });
+    const http = require('http');
+    const port = 4567;
+    const redirectUri = `http://127.0.0.1:${port}`;
+    
+    const server = http.createServer((req, res) => {
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      
+      // Phase 1: Browser reaches localhost with #hash in URL
+      if (url.pathname === '/') {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(`
+          <html>
+            <body style="font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #f3f4f6; margin: 0;">
+              <div style="background: white; padding: 2rem; border-radius: 1rem; shadow: 0 10px 15px -3px rgba(0,0,0,0.1); text-align: center;">
+                <h2 style="color: #111827; margin: 0;">Connecting to Bill Studio...</h2>
+                <p style="color: #6b7280;">You can close this window now.</p>
+                <script>
+                  const fragment = new URLSearchParams(window.location.hash.substring(1));
+                  const token = fragment.get('access_token');
+                  const error = fragment.get('error');
+                  if (token || error) {
+                    fetch('/callback?' + fragment.toString()).then(() => window.close());
+                  }
+                </script>
+              </div>
+            </body>
+          </html>
+        `);
+        return;
+      }
 
-    authWin.loadURL(authUrl);
-
-    // Watch every URL change for the redirect with access_token
-    const handleNav = (url) => {
-      if (url.startsWith(redirectUri)) {
-        const fragment = new URL(url.replace('#', '?')).searchParams;
-        const token = fragment.get('access_token');
-        const error = fragment.get('error');
-        authWin.destroy();
+      // Phase 2: JS in browser Sends results back to server via query string
+      if (url.pathname === '/callback') {
+        const token = url.searchParams.get('access_token');
+        const error = url.searchParams.get('error');
+        
+        res.writeHead(200, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
+        res.end('Authentication complete. You can close this tab.');
+        
+        server.close();
         if (token) resolve(token);
         else reject(new Error(error || 'OAuth cancelled'));
       }
-    };
+    });
 
-    authWin.webContents.on('will-redirect', (e, url) => handleNav(url));
-    authWin.webContents.on('will-navigate', (e, url) => handleNav(url));
-    authWin.on('closed', () => reject(new Error('Window closed by user')));
-    
-    if (silent) {
-      // If silent, give it a few seconds to redirect. If it doesn't, it means interaction is required.
-      setTimeout(() => {
-        if (!authWin.isDestroyed()) {
-          authWin.destroy();
-          reject(new Error('Silent auth failed, interaction required.'));
-        }
-      }, 5000);
-    }
+    server.listen(port, () => {
+      const authUrl =
+        `https://accounts.google.com/o/oauth2/v2/auth` +
+        `?client_id=${encodeURIComponent(clientId)}` +
+        `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+        `&response_type=token` +
+        `&scope=${encodeURIComponent(scope)}` +
+        `&prompt=select_account`;
+      
+      shell.openExternal(authUrl);
+    });
+
+    server.on('error', (err) => {
+      reject(err);
+    });
   });
 });
 // ──────────────────────────────────────────────────────────────────────────────
