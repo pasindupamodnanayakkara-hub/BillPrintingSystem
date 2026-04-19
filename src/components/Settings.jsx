@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { getProfiles, addProfile, updateProfile, deleteProfile } from '../config/profiles';
-import { getInventory, saveInventory, addItem, updateItem, deleteItem } from '../services/inventoryService';
+import { getInventory, addItem, updateItem, deleteItem } from '../services/inventoryService';
 import { Settings as SettingsIcon, Trash2, Plus, Save, Building2, Mail, Phone, MapPin, Image as ImageIcon, Briefcase } from 'lucide-react';
+import { useToast } from './ui/ToastProvider';
+import { useConfirm } from './ui/ConfirmProvider';
 
 const Settings = () => {
+  const { toast } = useToast();
+  const { confirm } = useConfirm();
   const [profiles, setProfiles] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
@@ -52,7 +56,7 @@ const Settings = () => {
       }));
       localStorage.setItem('BILL_COUNTER', appSettings.invoiceCounter);
       setEditingId(null);
-      alert('System settings saved!');
+      toast('System settings saved!', 'success');
       return;
     }
 
@@ -70,10 +74,15 @@ const Settings = () => {
     }
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm('Are you sure you want to delete this profile?')) {
+  const handleDelete = async (id) => {
+    const confirmed = await confirm({
+      title: 'Delete Profile',
+      message: 'Are you sure you want to delete this profile? This action cannot be undone.'
+    });
+    if (confirmed) {
       const updated = deleteProfile(id);
       setProfiles(updated);
+      toast('Profile deleted successfully', 'success');
     }
   };
 
@@ -117,7 +126,7 @@ const Settings = () => {
 
   return (
     <div className="h-full overflow-y-auto custom-scrollbar">
-      <div className="max-w-4xl mx-auto p-8">
+      <div className="w-full p-8 px-12">
       <div className="flex justify-between items-center mb-8">
         <div>
           <h2 className="text-3xl font-black text-gray-900 tracking-tight italic">BUSINESS SETTINGS</h2>
@@ -315,11 +324,11 @@ const Settings = () => {
         {profiles.map(profile => (
           <div key={profile.id} className="group bg-white border border-gray-200 rounded-3xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 relative overflow-hidden">
             <div className="flex gap-6 items-start">
-              <div className="w-20 h-20 bg-black rounded-2xl flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
+              <div className="w-20 h-20 flex items-center justify-center shrink-0">
                 {profile.logo ? (
-                  <img src={profile.logo} alt={profile.name} className="max-h-full object-contain p-2" />
+                  <img src={profile.logo} alt={profile.name} className="max-h-full max-w-full object-contain" />
                 ) : (
-                  <div className="text-white font-black text-2xl tracking-tighter italic">DR</div>
+                  <div className="w-full h-full bg-black rounded-2xl flex items-center justify-center text-white font-black text-2xl tracking-tighter italic">DR</div>
                 )}
               </div>
               <div className="min-w-0">

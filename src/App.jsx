@@ -29,7 +29,7 @@ function App() {
       <UpdateOverlay />
       <ReloadPrompt />
       {/* Navigation Bar */}
-      <nav className="bg-white border-b border-gray-200 px-8 py-3 flex justify-between items-center shadow-sm z-20 shrink-0">
+      <nav className="bg-white border-b border-gray-200 px-8 py-3 flex justify-between items-center shadow-sm z-20 shrink-0 print:hidden">
         <div className="flex items-center gap-3">
           <div>
             <h1 className="text-lg font-black text-gray-900 tracking-tight italic leading-none">BILL STUDIO</h1>

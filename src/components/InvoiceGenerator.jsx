@@ -8,8 +8,10 @@ import { backupToSheets } from '../services/googleSheets';
 import { GOOGLE_CLIENT_ID } from '../config/constants';
 import { getNextInvoiceNumber, saveBill, getBillHistory } from '../services/billService';
 import { getInventory } from '../services/inventoryService';
+import { useToast } from './ui/ToastProvider';
 
 const InvoiceGenerator = () => {
+  const { toast } = useToast();
   const settings = getSettings();
   const printRef = useRef();
   const previewContainerRef = useRef();
@@ -131,6 +133,11 @@ const InvoiceGenerator = () => {
     setInventory(getInventory());
   }, []);
 
+  // Update document title to suggest filename for PDF printing
+  useEffect(() => {
+    document.title = invoiceData.invoiceNumber;
+  }, [invoiceData.invoiceNumber]);
+
   const handleProfileSelect = (profileId) => {
     setSelectedProfileId(profileId);
     const profile = profiles.find(p => p.id === profileId);
@@ -184,8 +191,52 @@ const InvoiceGenerator = () => {
   const total = subtotal + taxAmount - discountAmount;
   const cur = settings.currency || 'Rs.';
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = async () => {
+    // 1. Basic validation
+    if (invoiceData.items.length === 0 || (invoiceData.items.length === 1 && !invoiceData.items[0].description && invoiceData.items[0].price === 0)) {
+      toast('Please add at least one item with a description and price before printing.', 'error');
+      return;
+    }
+
+    if (total <= 0) {
+      toast('Invoice total must be greater than 0 to save.', 'error');
+      return;
+    }
+
+    const billRecord = {
+      ...invoiceData,
+      subtotal,
+      taxAmount,
+      discountAmount,
+      total,
+      currency: cur
+    };
+
+    // 2. Detect Electron
+    const ipcRenderer = window?.require ? window.require('electron').ipcRenderer : null;
+
+    if (ipcRenderer) {
+      // 3. Use specialized Electron PDF handler with custom filename
+      try {
+        const success = await ipcRenderer.invoke('print-to-pdf', { filename: invoiceData.invoiceNumber });
+        if (success) {
+           // ONLY save to history if the user actually saved the PDF
+           saveBill(billRecord);
+           window.location.reload();
+        }
+      } catch (err) {
+        console.error('IPC PDF error:', err);
+        // Fallback for unexpected IPC errors
+        saveBill(billRecord);
+        window.print();
+        window.location.reload();
+      }
+    } else {
+      // 4. Standard browser print
+      saveBill(billRecord);
+      window.print();
+      window.location.reload();
+    }
   };
 
   const login = useGoogleLogin({
@@ -242,153 +293,62 @@ const InvoiceGenerator = () => {
       login();
     }
   };
-    <div className="w-full mx-auto flex flex-col gap-10 h-full">
-      {/* Header */}
-      <div className="flex justify-between items-start">
-        <div>
-          <div className="mb-6">
-            <img src={invoiceData.companyLogo} alt={invoiceData.companyName} className="h-20 w-auto object-contain" />
-          </div>
-          <div className="space-y-1">
-            {invoiceData.companyEmail && <p className="text-sm font-bold text-gray-500">{invoiceData.companyEmail}</p>}
-            {invoiceData.companyPhone && <p className="text-sm font-bold text-gray-500">{invoiceData.companyPhone}</p>}
-            {invoiceData.companyAddress && <p className="text-sm font-bold text-gray-500">{invoiceData.companyAddress}</p>}
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="flex flex-col items-end gap-3 mb-4">
-            <h1 className="text-5xl font-black text-gray-900 tracking-tighter italic uppercase truncate max-w-[500px] pr-4 leading-none">{invoiceData.companyName}</h1>
-            <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border shadow-sm ${
-              invoiceData.paymentStatus === 'Paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-              invoiceData.paymentStatus === 'Partially Paid' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-              invoiceData.paymentStatus === 'Cancelled' ? 'bg-rose-50 text-rose-600 border-rose-100' :
-              'bg-gray-50 text-gray-600 border-gray-100'
-            }`}>
-              {invoiceData.paymentStatus}
-            </div>
-          </div>
-          <div className="space-y-2">
-            <div>
-              <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Invoice Number</p>
-              <p className="text-base font-black text-gray-900">{invoiceData.invoiceNumber}</p>
-            </div>
-            <div>
-               <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Date Issued</p>
-               <p className="text-sm font-black text-gray-700">{invoiceData.invoiceDate}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Accent Line */}
-      <div className="h-1 bg-accent-gold rounded-full w-full" />
-
-      {/* Details Row */}
-      <div className="grid grid-cols-2 gap-12">
-        <div>
-          <p className="text-[11px] font-black text-accent-gold uppercase tracking-[0.2em] mb-3">Bill To</p>
-          <p className="text-2xl font-black text-gray-900 leading-tight">{invoiceData.clientName || 'Valued Client'}</p>
-          <div className="mt-3 space-y-1">
-            {invoiceData.clientAddress && <p className="text-sm font-bold text-gray-500">{invoiceData.clientAddress}</p>}
-            {invoiceData.clientEmail && <p className="text-sm font-bold text-gray-500">{invoiceData.clientEmail}</p>}
-            {invoiceData.clientPhone && <p className="text-sm font-bold text-gray-500">{invoiceData.clientPhone}</p>}
-          </div>
-        </div>
-        <div className="text-right flex flex-col justify-end">
-           <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Due Date</p>
-           <p className="text-base font-black text-gray-800">{invoiceData.dueDate}</p>
-        </div>
-      </div>
-
-      {/* Items Table */}
-      <div className="mt-4">
-        <div className="grid grid-cols-12 bg-gray-900 border border-gray-900 rounded-t-2xl py-4 px-6">
-          <div className="col-span-6 text-[10px] font-black text-white uppercase tracking-widest">Description</div>
-          <div className="col-span-2 text-[10px] font-black text-white uppercase tracking-widest text-center">Qty</div>
-          <div className="col-span-2 text-[10px] font-black text-white uppercase tracking-widest text-right">Rate</div>
-          <div className="col-span-2 text-[10px] font-black text-white uppercase tracking-widest text-right">Amount</div>
-        </div>
-        <div className="border-x border-b border-gray-100 rounded-b-2xl overflow-hidden">
-          {invoiceData.items.map((item, i) => (
-            <div key={item.id} className={`grid grid-cols-12 py-5 px-6 ${i !== invoiceData.items.length - 1 ? 'border-b border-gray-50' : ''} hover:bg-gray-50/50 transition-colors break-inside-avoid print:break-inside-avoid`}>
-              <div className="col-span-6">
-                <p className="text-sm font-bold text-gray-800">{item.description || 'General Photography Service'}</p>
-              </div>
-              <div className="col-span-2 text-sm font-bold text-gray-600 text-center">{item.qty}</div>
-              <div className="col-span-2 text-sm font-bold text-gray-600 text-right">{cur}{Number(item.price).toLocaleString()}</div>
-              <div className="col-span-2 text-sm font-black text-gray-900 text-right">{cur}{(item.qty * item.price).toLocaleString()}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Summary */}
-      <div className="flex justify-end mt-4">
-        <div className="w-72 bg-gray-50 rounded-3xl p-6 space-y-3 border border-gray-100 shadow-sm">
-          <div className="flex justify-between items-center text-xs font-bold text-gray-500">
-            <span className="uppercase tracking-widest">Subtotal</span>
-            <span className="text-gray-800">{cur}{subtotal.toLocaleString()}</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Tax ({invoiceData.taxRate}%)</span>
-            <span className="text-lg font-black text-gray-800 tracking-tighter italic">{cur} {taxAmount.toLocaleString()}</span>
-          </div>
-          <div className="flex justify-between items-center py-2 border-y border-gray-50 my-2">
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-              Discount {invoiceData.discountType === 'percentage' && `(${invoiceData.discount}%)`}
-            </span>
-            <span className="text-lg font-black text-red-500 tracking-tighter italic">-{cur} {discountAmount.toLocaleString()}</span>
-          </div>
-          <div className="flex justify-between items-center pt-2">
-            <span className="text-sm font-black text-gray-900 uppercase tracking-widest italic">Total Amount</span>
-            <span className="text-3xl font-black text-gray-950 tracking-tighter italic bg-yellow-400 px-3 py-1 rounded-xl shadow-sm">{cur} {total.toLocaleString()}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="mt-auto pt-10 border-t border-gray-100 flex flex-col items-center text-center pb-4">
-        <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.3em] mb-2 italic">Thank you for your business</p>
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-px bg-gray-200" />
-          <p className="text-sm font-black text-gray-900 uppercase tracking-tight">{invoiceData.companyName} Team</p>
-          <div className="w-8 h-px bg-gray-200" />
-        </div>
-      </div>
-    </div>
 
   return (
     <>
         <style>{`
           @media print {
-            @page { size: A4; margin: 0; }
-            .no-print-transform { transform: none !important; }
-            body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            body * { visibility: hidden !important; }
-            #invoice-print-area, #invoice-print-area * { visibility: visible !important; }
+            html { font-size: 2.015vw !important; }
+            @page { size: auto; margin: 0; }
+            body { 
+              -webkit-print-color-adjust: exact !important; 
+              print-color-adjust: exact !important; 
+              background: white !important;
+            }
+            /* Hide the scrollbars and reset layout for printing */
+            html, body, #root {
+              height: max-content !important;
+              min-height: 100vh !important;
+              overflow: visible !important;
+            }
+            
+            /* Remove absolute and transforms, make everything flow naturally */
+            .no-print-transform { 
+              transform: none !important; 
+              width: 100% !important; 
+              height: max-content !important; 
+              box-shadow: none !important; 
+              margin: 0 !important;
+            }
+            
             #invoice-print-area { 
-              position: absolute !important; 
-              top: 0 !important; 
-              left: 0 !important; 
-              width: 210mm !important; 
-              height: 297mm !important; 
+              position: static !important;
+              width: 100% !important; 
+              min-height: 98vh !important;
               margin: 0 !important; 
-              padding: 8mm !important;
-              z-index: 9999 !important; 
+              padding: 10mm !important;
+              padding-bottom: 0 !important;
+              box-sizing: border-box !important;
               background: white !important;
               box-shadow: none !important;
               border: none !important;
               display: flex !important;
               flex-direction: column !important;
             }
-            #invoice-print-area > div { display: flex !important; flex-direction: column !important; min-height: 100% !important; }
+            
+            #invoice-print-area > div { 
+              flex: 1 !important; 
+              display: flex !important; 
+              flex-direction: column !important; 
+            }
+            
             .no-print { display: none !important; }
           }
         `}</style>
 
-      <div className="flex h-full bg-transparent p-5 gap-5">
+      <div className="flex h-full bg-transparent p-5 gap-5 print:block print:p-0 print:h-auto print:bg-white">
         {/* Left Pane: Input Form */}
-        <div className="w-[380px] shrink-0 bg-white border border-gray-200 rounded-2xl flex flex-col shadow-xl overflow-y-auto">
+        <div className="w-[380px] shrink-0 bg-white border border-gray-200 rounded-2xl flex flex-col shadow-xl overflow-y-auto print:hidden">
           <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/80 sticky top-0 z-10 backdrop-blur-sm">
             <div>
               <h2 className="text-xl font-bold text-gray-800">Bill Generator</h2>
@@ -411,7 +371,7 @@ const InvoiceGenerator = () => {
                     <img src={invoiceData.companyLogo} alt="" className="w-full h-full object-contain p-1" />
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[10px] font-bold text-accent-gold uppercase tracking-widest leading-none mb-0.5">Selected Profile</span>
+                    <span className="text-[0.625rem] font-bold text-accent-gold uppercase tracking-widest leading-none mb-0.5">Selected Profile</span>
                     <span className="text-sm font-black text-gray-900 tracking-tight truncate uppercase italic">
                       {profiles.find(p => p.id === selectedProfileId)?.name || 'SELECT STUDIO'}
                     </span>
@@ -464,7 +424,7 @@ const InvoiceGenerator = () => {
                   <button
                     key={status}
                     onClick={() => setInvoiceData(prev => ({ ...prev, paymentStatus: status }))}
-                    className={`flex-1 py-2 px-1 rounded-xl text-[10px] font-black uppercase tracking-tighter transition-all border ${
+                    className={`flex-1 py-2 px-1 rounded-xl text-[0.625rem] font-black uppercase tracking-tighter transition-all border ${
                       invoiceData.paymentStatus === status 
                         ? 'bg-gray-900 border-gray-900 text-white shadow-lg' 
                         : 'bg-white border-gray-100 text-gray-500 hover:border-gray-300'
@@ -481,21 +441,21 @@ const InvoiceGenerator = () => {
               <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Client Information</h3>
               <div className="space-y-3">
                 <div className="relative">
-                  <label className="text-[11px] absolute -top-2 left-3 bg-white px-1 font-bold text-gray-400 z-10 uppercase tracking-wider">Client Name *</label>
+                  <label className="text-[0.6875rem] absolute -top-2 left-3 bg-white px-1 font-bold text-gray-400 z-10 uppercase tracking-wider">Client Name *</label>
                   <input type="text" placeholder="e.g. John Doe" className="w-full border border-gray-200 rounded-xl p-3 text-base focus:border-accent-gold outline-none" value={invoiceData.clientName} onChange={(e) => handleInputChange('clientName', e.target.value)} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="relative">
-                    <label className="text-[11px] absolute -top-2 left-3 bg-white px-1 font-bold text-gray-400 z-10 uppercase tracking-wider">Email</label>
+                    <label className="text-[0.6875rem] absolute -top-2 left-3 bg-white px-1 font-bold text-gray-400 z-10 uppercase tracking-wider">Email</label>
                     <input type="text" className="w-full border border-gray-200 rounded-xl p-3 text-base focus:border-accent-gold outline-none" value={invoiceData.clientEmail} onChange={(e) => handleInputChange('clientEmail', e.target.value)} />
                   </div>
                   <div className="relative">
-                    <label className="text-[11px] absolute -top-2 left-3 bg-white px-1 font-bold text-gray-400 z-10 uppercase tracking-wider">Phone</label>
+                    <label className="text-[0.6875rem] absolute -top-2 left-3 bg-white px-1 font-bold text-gray-400 z-10 uppercase tracking-wider">Phone</label>
                     <input type="text" className="w-full border border-gray-200 rounded-xl p-3 text-base focus:border-accent-gold outline-none" value={invoiceData.clientPhone} onChange={(e) => handleInputChange('clientPhone', e.target.value)} />
                   </div>
                 </div>
                 <div className="relative">
-                  <label className="text-[11px] absolute -top-2 left-3 bg-white px-1 font-bold text-gray-400 z-10 uppercase tracking-wider">Address</label>
+                  <label className="text-[0.6875rem] absolute -top-2 left-3 bg-white px-1 font-bold text-gray-400 z-10 uppercase tracking-wider">Address</label>
                   <input type="text" className="w-full border border-gray-200 rounded-xl p-3 text-base focus:border-accent-gold outline-none" value={invoiceData.clientAddress} onChange={(e) => handleInputChange('clientAddress', e.target.value)} />
                 </div>
               </div>
@@ -507,27 +467,27 @@ const InvoiceGenerator = () => {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="relative">
-                    <label className="text-[11px] absolute -top-2 left-3 bg-white px-1 font-bold text-gray-400 z-10 uppercase tracking-wider">Invoice #</label>
+                    <label className="text-[0.6875rem] absolute -top-2 left-3 bg-white px-1 font-bold text-gray-400 z-10 uppercase tracking-wider">Invoice #</label>
                     <input type="text" className="w-full border border-gray-200 rounded-xl p-3 text-base focus:border-accent-gold outline-none font-bold" value={invoiceData.invoiceNumber} onChange={(e) => handleInputChange('invoiceNumber', e.target.value)} />
                   </div>
                   <div className="relative">
-                    <label className="text-[11px] absolute -top-2 left-3 bg-white px-1 font-bold text-gray-400 z-10 uppercase tracking-wider">Date</label>
+                    <label className="text-[0.6875rem] absolute -top-2 left-3 bg-white px-1 font-bold text-gray-400 z-10 uppercase tracking-wider">Date</label>
                     <input type="text" className="w-full border border-gray-200 rounded-xl p-3 text-base focus:border-accent-gold outline-none" value={invoiceData.invoiceDate} onChange={(e) => handleInputChange('invoiceDate', e.target.value)} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="relative">
-                    <label className="text-[11px] absolute -top-2 left-3 bg-white px-1 font-bold text-gray-400 z-10 uppercase tracking-wider">Due Date</label>
+                    <label className="text-[0.6875rem] absolute -top-2 left-3 bg-white px-1 font-bold text-gray-400 z-10 uppercase tracking-wider">Due Date</label>
                     <input type="text" className="w-full border border-gray-200 rounded-xl p-3 text-base focus:border-accent-gold outline-none" value={invoiceData.dueDate} onChange={(e) => handleInputChange('dueDate', e.target.value)} />
                   </div>
                   <div className="relative">
-                    <label className="text-[11px] absolute -top-2 left-3 bg-white px-1 font-bold text-gray-400 z-10 uppercase tracking-wider">Tax (%)</label>
+                    <label className="text-[0.6875rem] absolute -top-2 left-3 bg-white px-1 font-bold text-gray-400 z-10 uppercase tracking-wider">Tax (%)</label>
                     <input type="number" className="w-full border border-gray-200 rounded-xl p-3 text-base focus:border-accent-gold outline-none" value={invoiceData.taxRate} onChange={(e) => handleInputChange('taxRate', e.target.value)} />
                   </div>
                 </div>
                 <div className="relative">
                   <div className="flex justify-between items-center mb-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Discount</label>
+                    <label className="text-[0.625rem] font-bold text-gray-400 uppercase tracking-widest pl-1">Discount</label>
                     <div className="flex bg-gray-100 rounded-lg p-0.5">
                       <button 
                         onClick={() => handleInputChange('discountType', 'amount')}
@@ -549,6 +509,7 @@ const InvoiceGenerator = () => {
                     placeholder={invoiceData.discountType === 'percentage' ? 'e.g. 10' : 'e.g. 100'}
                     value={invoiceData.discount} 
                     onChange={(e) => handleInputChange('discount', e.target.value)} 
+                    onFocus={(e) => e.target.select()}
                   />
                 </div>
               </div>
@@ -558,14 +519,14 @@ const InvoiceGenerator = () => {
             <section>
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Pricing Items</h3>
-                <button onClick={addItem} className="text-[10px] font-bold bg-accent-gold/10 text-accent-gold px-3 py-1 rounded-full hover:bg-accent-gold/20 transition-all uppercase tracking-wider">
+                <button onClick={addItem} className="text-[0.625rem] font-bold bg-accent-gold/10 text-accent-gold px-3 py-1 rounded-full hover:bg-accent-gold/20 transition-all uppercase tracking-wider">
                   + Add Line
                 </button>
               </div>
               <div className="space-y-3">
                 {invoiceData.items.map((item) => (
                   <div key={item.id} className="bg-gray-50/50 p-3 rounded-2xl border border-gray-100 space-y-2 relative group">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Service or Product Description</label>
+                    <label className="text-[0.625rem] font-black text-gray-400 uppercase tracking-widest mb-2 block">Service or Product Description</label>
                     <input 
                       type="text" 
                       className="w-full text-base font-bold outline-none bg-transparent placeholder-gray-300 border-b border-gray-100 focus:border-black transition-colors pb-1"
@@ -598,12 +559,12 @@ const InvoiceGenerator = () => {
                     )}
                     <div className="flex gap-3">
                       <div className="flex-1 flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase">Qty</span>
-                        <input type="number" className="w-full bg-transparent p-1 text-sm border-b border-gray-200 focus:border-accent-gold outline-none" value={item.qty} onChange={(e) => handleItemChange(item.id, 'qty', e.target.value)} />
+                        <span className="text-[0.625rem] font-bold text-gray-400 uppercase">Qty</span>
+                        <input type="number" className="w-full bg-transparent p-1 text-sm border-b border-gray-200 focus:border-accent-gold outline-none" value={item.qty} onChange={(e) => handleItemChange(item.id, 'qty', e.target.value)} onFocus={(e) => e.target.select()} />
                       </div>
                       <div className="flex-1 flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase">Price</span>
-                        <input type="number" className="w-full bg-transparent p-1 text-sm border-b border-gray-200 focus:border-accent-gold outline-none" value={item.price} onChange={(e) => handleItemChange(item.id, 'price', e.target.value)} />
+                        <span className="text-[0.625rem] font-bold text-gray-400 uppercase">Price</span>
+                        <input type="number" className="w-full bg-transparent p-1 text-sm border-b border-gray-200 focus:border-accent-gold outline-none" value={item.price} onChange={(e) => handleItemChange(item.id, 'price', e.target.value)} onFocus={(e) => e.target.select()} />
                       </div>
                     </div>
                     <button onClick={() => removeItem(item.id)} className="absolute -top-2 -right-2 bg-white text-red-400 hover:text-red-600 p-1.5 rounded-full shadow-md border border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -618,9 +579,9 @@ const InvoiceGenerator = () => {
         </div>
 
         {/* Right Pane: Live Preview */}
-        <div className="flex-1 flex flex-col gap-4 min-w-0 min-h-0 overflow-hidden">
+        <div className="flex-1 flex flex-col gap-4 min-w-0 min-h-0 overflow-hidden print:block print:overflow-visible print:h-auto">
           {/* Print Toolbar */}
-          <div className="bg-white border border-gray-200 rounded-2xl px-8 py-4 shadow-xl flex justify-between items-center backdrop-blur-md bg-white/90">
+          <div className="bg-white border border-gray-200 rounded-2xl px-8 py-4 shadow-xl flex justify-between items-center backdrop-blur-md bg-white/90 print:hidden">
             <div>
               <span className="text-sm font-bold text-gray-800 uppercase tracking-widest">Document Preview</span>
               <p className="text-xs text-gray-400">High-fidelity print rendering</p>
@@ -661,7 +622,7 @@ const InvoiceGenerator = () => {
           </div>
 
           {/* Dynamic Scaled Container */}
-          <div className="flex-1 overflow-hidden relative flex items-center justify-center bg-transparent mb-5" ref={previewContainerRef}>
+          <div className="flex-1 overflow-hidden relative flex items-center justify-center bg-transparent mb-5 print:block print:overflow-visible print:m-0 print:p-0" ref={previewContainerRef}>
             {/* Safe Area wrapper to apply transform dynamically */}
             <div 
               style={{ 
@@ -672,13 +633,17 @@ const InvoiceGenerator = () => {
               className="origin-center shadow-2xl bg-white flex flex-col shrink-0 no-print-transform transition-transform duration-75"
             >
               <div id="invoice-print-area" className="flex-1 p-16 flex flex-col h-full w-full bg-white relative" ref={printRef}>
-                <div className="w-full mx-auto flex flex-col gap-10 h-full">
+                            <div className="w-full mx-auto flex flex-col gap-6 h-full">
 
               {/* Header */}
               <div className="flex justify-between items-start">
                 <div>
                   <div className="mb-6">
-                    <img src={invoiceData.companyLogo} alt={invoiceData.companyName} className="h-20 w-auto object-contain" />
+                    <img 
+                      src={invoiceData.companyLogo} 
+                      alt={invoiceData.companyName} 
+                      className="h-20 w-auto object-contain mix-blend-multiply contrast-[1.1]" 
+                    />
                   </div>
                   <div className="space-y-1">
                     {invoiceData.companyEmail && <p className="text-sm font-bold text-gray-500">{invoiceData.companyEmail}</p>}
@@ -689,7 +654,7 @@ const InvoiceGenerator = () => {
                 <div className="text-right">
                   <div className="flex flex-col items-end gap-3 mb-4">
                     <h1 className="text-5xl font-black text-gray-900 tracking-tighter italic uppercase truncate max-w-[500px] pr-4 leading-none">{invoiceData.companyName}</h1>
-                    <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border shadow-sm ${
+                    <div className={`px-4 py-1.5 rounded-full text-[0.625rem] font-black uppercase tracking-[0.2em] border shadow-sm ${
                       invoiceData.paymentStatus === 'Paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                       invoiceData.paymentStatus === 'Partially Paid' ? 'bg-amber-50 text-amber-600 border-amber-100' :
                       invoiceData.paymentStatus === 'Cancelled' ? 'bg-rose-50 text-rose-600 border-rose-100' :
@@ -700,11 +665,11 @@ const InvoiceGenerator = () => {
                   </div>
                   <div className="space-y-2">
                     <div>
-                      <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Invoice Number</p>
+                      <p className="text-[0.6875rem] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Invoice Number</p>
                       <p className="text-base font-black text-gray-900">{invoiceData.invoiceNumber}</p>
                     </div>
                     <div>
-                       <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Date Issued</p>
+                       <p className="text-[0.6875rem] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Date Issued</p>
                        <p className="text-sm font-black text-gray-700">{invoiceData.invoiceDate}</p>
                     </div>
                   </div>
@@ -717,7 +682,7 @@ const InvoiceGenerator = () => {
               {/* Details Row */}
               <div className="grid grid-cols-2 gap-12">
                 <div>
-                  <p className="text-[11px] font-black text-accent-gold uppercase tracking-[0.2em] mb-3">Bill To</p>
+                  <p className="text-[0.6875rem] font-black text-accent-gold uppercase tracking-[0.2em] mb-1">Bill To</p>
                   <p className="text-2xl font-black text-gray-900 leading-tight">{invoiceData.clientName || 'Valued Client'}</p>
                   <div className="mt-3 space-y-1">
                     {invoiceData.clientAddress && <p className="text-sm font-bold text-gray-500">{invoiceData.clientAddress}</p>}
@@ -726,7 +691,7 @@ const InvoiceGenerator = () => {
                   </div>
                 </div>
                 <div className="text-right flex flex-col justify-end">
-                   <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Due Date</p>
+                   <p className="text-[0.6875rem] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Due Date</p>
                    <p className="text-base font-black text-gray-800">{invoiceData.dueDate}</p>
                 </div>
               </div>
@@ -734,10 +699,10 @@ const InvoiceGenerator = () => {
               {/* Items Table */}
               <div className="mt-4">
                 <div className="grid grid-cols-12 bg-gray-900 border border-gray-900 rounded-t-2xl py-4 px-6">
-                  <div className="col-span-6 text-[10px] font-black text-white uppercase tracking-widest">Description</div>
-                  <div className="col-span-2 text-[10px] font-black text-white uppercase tracking-widest text-center">Qty</div>
-                  <div className="col-span-2 text-[10px] font-black text-white uppercase tracking-widest text-right">Rate</div>
-                  <div className="col-span-2 text-[10px] font-black text-white uppercase tracking-widest text-right">Amount</div>
+                  <div className="col-span-6 text-[0.625rem] font-black text-white uppercase tracking-widest">Description</div>
+                  <div className="col-span-2 text-[0.625rem] font-black text-white uppercase tracking-widest text-center">Qty</div>
+                  <div className="col-span-2 text-[0.625rem] font-black text-white uppercase tracking-widest text-right">Rate</div>
+                  <div className="col-span-2 text-[0.625rem] font-black text-white uppercase tracking-widest text-right">Amount</div>
                 </div>
                 <div className="border-x border-b border-gray-100 rounded-b-2xl overflow-hidden">
                   {invoiceData.items.map((item, i) => (
@@ -773,7 +738,7 @@ const InvoiceGenerator = () => {
                   </div>
                   )}
                   <div className="flex justify-between items-center pt-2">
-                    <span className="text-[10px] font-black text-accent-gold uppercase tracking-[0.2em]">Total Amount</span>
+                    <span className="text-[0.625rem] font-black text-accent-gold uppercase tracking-[0.2em]">Total Amount</span>
                     <span className="text-2xl font-black text-gray-900">{cur}{total.toLocaleString()}</span>
                   </div>
                 </div>
@@ -781,7 +746,7 @@ const InvoiceGenerator = () => {
 
               {/* Footer */}
               <div className="mt-auto pt-10 border-t border-gray-100 flex flex-col items-center text-center pb-4">
-                <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.3em] mb-2 italic">Thank you for your business</p>
+                <p className="text-[0.6875rem] font-black text-gray-400 uppercase tracking-[0.3em] mb-2 italic">Thank you for your business</p>
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-px bg-gray-200" />
                   <p className="text-sm font-black text-gray-900 uppercase tracking-tight">{invoiceData.companyName} Team</p>

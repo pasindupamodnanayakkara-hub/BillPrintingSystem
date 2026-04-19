@@ -54,3 +54,10 @@ export const restoreHistory = (bills) => {
     }
   }
 };
+
+export const deleteBill = (id) => {
+  const history = getBillHistory();
+  const updatedHistory = history.filter(bill => bill.id !== id);
+  localStorage.setItem(BILL_HISTORY_KEY, JSON.stringify(updatedHistory));
+  return updatedHistory;
+};

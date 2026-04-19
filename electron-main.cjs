@@ -161,10 +161,11 @@ autoUpdater.on('error', (err) => {
   if (mainWindow) mainWindow.webContents.send('updater-event', { type: 'error', error: err == null ? "unknown" : (err.message || err.toString()) });
 });
 
-ipcMain.handle('print-to-pdf', async (event) => {
+ipcMain.handle('print-to-pdf', async (event, { filename }) => {
+  const suggestedName = filename ? `${filename}.pdf` : `Invoice_${Date.now()}.pdf`;
   const { filePath } = await dialog.showSaveDialog(mainWindow, {
     title: 'Save Invoice as PDF',
-    defaultPath: path.join(app.getPath('documents'), `Invoice_${Date.now()}.pdf`),
+    defaultPath: path.join(app.getPath('documents'), suggestedName),
     filters: [{ name: 'PDF Files', extensions: ['pdf'] }]
   });
 

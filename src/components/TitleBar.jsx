@@ -2,7 +2,7 @@ import React from 'react';
 
 const TitleBar = () => {
   return (
-    <div className="h-10 bg-gray-900 flex justify-between items-center select-none shadow-md border-b border-gray-800" style={{ WebkitAppRegion: 'drag' }}>
+    <div className="h-10 bg-gray-900 flex justify-between items-center select-none shadow-md border-b border-gray-800 print:hidden" style={{ WebkitAppRegion: 'drag' }}>
       {/* App Info */}
       <div className="flex items-center gap-3 px-4">
         <div className="w-5 h-5 bg-accent-gold rounded flex items-center justify-center">

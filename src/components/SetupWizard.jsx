@@ -4,10 +4,12 @@ import { fetchBillsFromSheets } from '../services/googleSheets';
 import { GOOGLE_CLIENT_ID } from '../config/constants';
 import { restoreHistory } from '../services/billService';
 import { addProfile } from '../config/profiles';
+import { useToast } from './ui/ToastProvider';
 
 const ipcRenderer = window?.require ? window.require('electron').ipcRenderer : null;
 
 const SetupWizard = ({ onComplete }) => {
+  const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [isRestoring, setIsRestoring] = useState(false);
   const [agreed, setAgreed] = useState(false);
@@ -32,19 +34,19 @@ const SetupWizard = ({ onComplete }) => {
         localStorage.setItem('BILL_STUDIO_SETUP_COMPLETE', 'true');
         onComplete();
       } else {
-        alert('No backup found on your Google Drive. Please start a fresh setup.');
+        toast('No backup found on your Google Drive. Please start a fresh setup.', 'warning');
         nextStep();
       }
     } catch (error) {
       console.error('Restore failed', error);
-      alert('Failed to connect to Google Drive.');
+      toast('Failed to connect to Google Drive.', 'error');
     } finally {
       setIsRestoring(false);
     }
   };
 
   const handleFinish = () => {
-    if (!profileData.name) return alert('Please enter your business name.');
+    if (!profileData.name) return toast('Please enter your business name.', 'error');
     addProfile(profileData);
     localStorage.setItem('BILL_STUDIO_SETUP_COMPLETE', 'true');
     onComplete();
