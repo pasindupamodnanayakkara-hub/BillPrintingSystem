@@ -55,7 +55,7 @@ ipcMain.handle('google-oauth', async (event, { clientId, silent = false }) => {
 
   // Silent Auth stays in internal window to avoid popping browser
   if (silent) {
-    const redirectUri = 'http://localhost/';
+    const redirectUri = 'http://127.0.0.1/';
     let authUrl =
       `https://accounts.google.com/o/oauth2/v2/auth` +
       `?client_id=${encodeURIComponent(clientId)}` +
@@ -95,7 +95,7 @@ ipcMain.handle('google-oauth', async (event, { clientId, silent = false }) => {
   return new Promise((resolve, reject) => {
     const http = require('http');
     const port = 4567;
-    const redirectUri = `http://localhost:${port}/`;
+    const redirectUri = `http://127.0.0.1:${port}/`;
     
     const server = http.createServer((req, res) => {
       const url = new URL(req.url, `http://${req.headers.host}`);
