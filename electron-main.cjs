@@ -55,7 +55,7 @@ ipcMain.handle('google-oauth', async (event, { clientId, silent = false }) => {
 
   // Silent Auth stays in internal window to avoid popping browser
   if (silent) {
-    const redirectUri = 'http://localhost';
+    const redirectUri = 'http://127.0.0.1';
     let authUrl =
       `https://accounts.google.com/o/oauth2/v2/auth` +
       `?client_id=${encodeURIComponent(clientId)}` +

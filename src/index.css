@@ -10,7 +10,7 @@ html, body, #root {
   overflow: hidden;
 }
 
-#root {
+.zoom-wrapper {
   zoom: 0.8; /* Reduce UI size by 20% globally */
 }
 
