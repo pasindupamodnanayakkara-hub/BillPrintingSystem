@@ -17,6 +17,16 @@ function App() {
     if (!isComplete) {
       setShowSetup(true);
     }
+
+    // OAuth Debug Listener
+    const ipcRenderer = window?.require ? window.require('electron').ipcRenderer : null;
+    if (ipcRenderer) {
+      ipcRenderer.on('oauth-debug', (event, data) => {
+        console.log('OAuth Debug Info:', data);
+        // Show detailed alert so user can copy the URI
+        alert(`OAuth Debug Information:\n\nType: ${data.type}\nRedirect URI: ${data.redirectUri}\n\nPlease ensure this Redirect URI is added exactly as shown to your Google Cloud Console.`);
+      });
+    }
   }, []);
 
   if (showSetup) {
