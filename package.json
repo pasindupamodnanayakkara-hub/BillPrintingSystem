@@ -27,6 +27,7 @@
       "electron-main.cjs"
     ],
     "win": {
+      "publisherName": "Infixa Digital",
       "target": [
         "nsis"
       ]
