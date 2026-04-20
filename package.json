@@ -34,15 +34,21 @@
       ]
     },
     "nsis": {
-      "oneClick": true,
+      "oneClick": false,
       "perMachine": true,
       "include": "build/installer.nsh",
-      "allowToChangeInstallationDirectory": false,
+      "allowToChangeInstallationDirectory": true,
       "license": "build/license.txt",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Bill Studio",
       "runAfterFinish": true,
+      "installerHeader": "build/installerHeader.bmp",
+      "installerSidebar": "build/installerSidebar.bmp",
+      "uninstallerSidebar": "build/installerSidebar.bmp",
+      "allowElevation": true,
+      "guid": "6b7d4f78-95ed-4c05-8472-5242e176132d",
+      "uninstallDisplayName": "Bill Studio",
       "differentialPackage": true,
       "deleteAppDataOnUninstall": false,
       "unicode": true

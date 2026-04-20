@@ -3,7 +3,8 @@ import { Cloud, CheckCircle, AlertCircle, RefreshCw, LogOut, Database, History, 
 import { uploadEncryptedBackup, downloadEncryptedBackup, getUserInfo } from '../services/googleDriveService';
 import { encryptBackup, decryptBackup } from '../services/encryptionService';
 import { GOOGLE_CLIENT_ID } from '../config/constants';
-import { getBillHistory, restoreHistory } from '../services/billService';
+import { getBillHistory, restoreFullBundle } from '../services/billService';
+import { getProfiles } from '../config/profiles';
 import { useToast } from './ui/ToastProvider';
 import { useConfirm } from './ui/ConfirmProvider';
 
@@ -77,13 +78,20 @@ const CloudBackup = () => {
     setIsSyncing(true);
     try {
       const history = getBillHistory();
-      if (history.length === 0) {
-        toast('No bills found to backup.', 'info');
-        return;
-      }
+      const profiles = getProfiles();
+      const settings = JSON.parse(localStorage.getItem('BILL_STUDIO_SETTINGS') || '{}');
+
+      // Create a unified backup bundle
+      const backupBundle = {
+        bills: history,
+        profiles: profiles,
+        settings: settings,
+        version: '1.0.0',
+        timestamp: new Date().toISOString()
+      };
 
       // 1. Encrypt the data
-      const encryptedData = await encryptBackup(history);
+      const encryptedData = await encryptBackup(backupBundle);
       
       // 2. Upload to hidden AppDataFolder
       await uploadEncryptedBackup(token, encryptedData);
@@ -91,7 +99,7 @@ const CloudBackup = () => {
       const now = new Date().getTime();
       localStorage.setItem('LAST_BACKUP_DATE', String(now));
       setLastBackup(new Date(now).toLocaleString());
-      toast('Encrypted backup saved successfully!', 'success');
+      toast('Full encrypted backup saved successfully!', 'success');
     } catch (err) {
       console.error('Backup error:', err);
       if (err.message?.includes('401')) {
@@ -129,12 +137,13 @@ const CloudBackup = () => {
       }
 
       // 2. Decrypt
-      const cloudBills = await decryptBackup(encryptedData);
+      const cloudData = await decryptBackup(encryptedData);
       
       // 3. Restore
-      restoreHistory(cloudBills);
+      restoreFullBundle(cloudData);
 
-      toast(`Restore complete! ${cloudBills.length} bills recovered.`, 'success');
+      const itemsCount = Array.isArray(cloudData) ? cloudData.length : (cloudData.bills?.length || 0);
+      toast(`Restore complete! ${itemsCount} items recovered.`, 'success');
       setTimeout(() => window.location.reload(), 1500);
     } catch (err) {
       console.error('Restore error:', err);

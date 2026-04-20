@@ -3,7 +3,8 @@ import { CheckCircle2, CloudDownload, Building2, ChevronRight, ChevronLeft, Shie
 import { downloadEncryptedBackup } from '../services/googleDriveService';
 import { decryptBackup } from '../services/encryptionService';
 import { GOOGLE_CLIENT_ID } from '../config/constants';
-import { restoreHistory } from '../services/billService';
+import { restoreFullBundle } from '../services/billService';
+import { getProfiles } from '../config/profiles';
 import { addProfile } from '../config/profiles';
 import { useToast } from './ui/ToastProvider';
 
@@ -38,7 +39,7 @@ const SetupWizard = ({ onComplete }) => {
         const cloudBills = await decryptBackup(encryptedData);
         
         // 3. Restore
-        restoreHistory(cloudBills);
+        restoreFullBundle(cloudBills);
         localStorage.setItem('BILL_STUDIO_SETUP_COMPLETE', 'true');
         onComplete();
       } else {

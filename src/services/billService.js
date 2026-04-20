@@ -42,7 +42,6 @@ export const setNextInvoiceNumber = (num) => {
 export const restoreHistory = (bills) => {
   localStorage.setItem(BILL_HISTORY_KEY, JSON.stringify(bills));
   
-  // Also try to update the counter based on restored bills
   if (bills.length > 0) {
     const numbers = bills.map(b => {
       const match = b.invoiceNumber.match(/\d+$/);
@@ -52,6 +51,18 @@ export const restoreHistory = (bills) => {
     if (maxNum > 0) {
       localStorage.setItem(BILL_COUNTER_KEY, String(maxNum + 1));
     }
+  }
+};
+
+export const restoreFullBundle = (bundle) => {
+  if (Array.isArray(bundle)) {
+    // Legacy format (just bills)
+    restoreHistory(bundle);
+  } else if (bundle && typeof bundle === 'object') {
+    // New format (bills + profiles + settings)
+    if (bundle.bills) restoreHistory(bundle.bills);
+    if (bundle.profiles) localStorage.setItem('business_profiles', JSON.stringify(bundle.profiles));
+    if (bundle.settings) localStorage.setItem(SETTINGS_KEY, JSON.stringify(bundle.settings));
   }
 };
 
