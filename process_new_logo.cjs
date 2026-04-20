@@ -10,9 +10,9 @@ async function processNewLogo() {
     console.log('Reading generated logo from:', generatedPath);
     const image = await Jimp.read(generatedPath);
     
-    // 1. Zoom and Trim (Autocrop)
-    // We use a small border (2px) to make sure it fills the canvas as requested.
-    image.autocrop({ leaveBorder: 2 });
+    // 1. Maximized Zoom and Trim
+    // We use zero border to force the graphic to the literal edges.
+    image.autocrop({ leaveBorder: 0 });
 
     // 2. Remove Gray Background
     // We scan for shades of gray. Neutral gray is usually balanced R ~= G ~= B.
