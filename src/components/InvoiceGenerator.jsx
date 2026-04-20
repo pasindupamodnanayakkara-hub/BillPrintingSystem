@@ -260,6 +260,7 @@ const InvoiceGenerator = () => {
       }
     },
     scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file',
+    prompt: 'select_account',
   });
 
   const handleBackup = async () => {

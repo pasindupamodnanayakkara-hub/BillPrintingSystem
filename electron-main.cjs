@@ -145,7 +145,7 @@ ipcMain.handle('google-oauth', async (event, { clientId, silent = false }) => {
         `&redirect_uri=${encodeURIComponent(redirectUri)}` +
         `&response_type=token` +
         `&scope=${encodeURIComponent(scope)}` +
-        `&prompt=select_account`;
+        `&prompt=select_account consent`;
       
       if (mainWindow) mainWindow.webContents.send('oauth-debug', { type: 'interactive', url: authUrl, redirectUri });
       shell.openExternal(authUrl);
