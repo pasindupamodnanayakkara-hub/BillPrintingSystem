@@ -1,26 +1,6 @@
-import logo from '../assets/logo.png';
-import drEventLogo from '../assets/dr_event_logo.png';
 
-const DEFAULT_PROFILES = [
-  {
-    id: 'studio-dark-room',
-    name: 'Studio Dark Room',
-    email: 'studiodarkroom@gmail.com',
-    phone: '075 0938 466',
-    address: 'Matara, Sri Lanka',
-    logo: logo,
-    isDefault: true
-  },
-  {
-    id: 'dr-event',
-    name: 'DR EVENT',
-    email: 'drevent@gmail.com',
-    phone: '075 0938 466',
-    address: 'Matara, Sri Lanka',
-    logo: drEventLogo,
-    isDefault: false
-  }
-];
+
+const DEFAULT_PROFILES = [];
 
 export const getProfiles = () => {
   const saved = localStorage.getItem('business_profiles');
@@ -31,7 +11,10 @@ export const getProfiles = () => {
       console.error('Failed to parse profiles', e);
     }
   }
-  return DEFAULT_PROFILES;
+  
+  // If the key is null (meaning it hasn't been set yet), return defaults.
+  // If the key is '[]' (explicitly cleared), return empty array.
+  return saved === null ? DEFAULT_PROFILES : [];
 };
 
 export const saveProfiles = (profiles) => {

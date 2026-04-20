@@ -4,7 +4,6 @@ import { downloadEncryptedBackup } from '../services/googleDriveService';
 import { decryptBackup } from '../services/encryptionService';
 import { GOOGLE_CLIENT_ID } from '../config/constants';
 import { restoreFullBundle } from '../services/billService';
-import { getProfiles } from '../config/profiles';
 import { addProfile } from '../config/profiles';
 import { useToast } from './ui/ToastProvider';
 
@@ -190,7 +189,7 @@ const SetupWizard = ({ onComplete }) => {
             <div className="space-y-4 mb-8">
               <input 
                 type="text" 
-                placeholder="Business Name (e.g. Studio Dark Room)"
+                placeholder="Business Name (e.g. My Studio)"
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 font-bold focus:border-accent-gold outline-none"
                 value={profileData.name}
                 onChange={(e) => setProfileData({...profileData, name: e.target.value})}

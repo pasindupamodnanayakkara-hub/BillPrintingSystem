@@ -84,6 +84,22 @@ function App() {
            activeTab === 'backup' ? <CloudBackup /> :
            <Settings />}
         </main>
+
+        {/* Branding Footer */}
+        <footer className="bg-white border-t border-gray-100 px-8 py-2.5 flex justify-between items-center shrink-0 text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] italic print:hidden">
+          <div className="flex items-center gap-3">
+            <span className="text-gray-500">© 2026 BILL STUDIO</span>
+            <span className="w-1 h-1 bg-gray-200 rounded-full"></span>
+            <span className="flex items-center gap-1.5">
+              Powered By <span className="text-gray-900 not-italic">Infixa Digital</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="bg-gray-50 px-2 py-0.5 rounded text-gray-400">v1.0.0 Production</span>
+            <span className="text-gray-300">|</span>
+            <span>Infixa Digital All Rights Reserved</span>
+          </div>
+        </footer>
       </div>
     </div>
   );

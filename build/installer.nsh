@@ -19,5 +19,9 @@
     RMDir /r "$APPDATA\billprintingsystem"
     RMDir /r "$LOCALAPPDATA\billprintingsystem"
     RMDir /r "$LOCALAPPDATA\billprintingsystem-updater"
+    
+    ; Cleanup custom installer metadata keys
+    DeleteRegKey HKLM "Software\6b7d4f78-95ed-4c05-8472-5242e176132d"
+    DeleteRegKey HKCU "Software\6b7d4f78-95ed-4c05-8472-5242e176132d"
   skip_cleanup:
 !macroend

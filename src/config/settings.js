@@ -1,10 +1,10 @@
 export const getSettings = () => {
   return {
-    studioName: 'Studio Dark Room',
-    email: 'studiodarkroom@gmail.com',
-    phone: '075 0938 466',
-    address: 'Matara, Sri Lanka',
-    taxRate: 10,
+    studioName: 'YOUR STUDIO NAME',
+    email: 'contact@yourstudio.com',
+    phone: '+94 000 000 000',
+    address: 'City, Sri Lanka',
+    taxRate: 0,
     currency: 'Rs.',
   };
 };

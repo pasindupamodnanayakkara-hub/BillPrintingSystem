@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { getProfiles, addProfile, updateProfile, deleteProfile } from '../config/profiles';
 import { getInventory, addItem, updateItem, deleteItem } from '../services/inventoryService';
-import { Settings as SettingsIcon, Trash2, Plus, Save, Building2, Mail, Phone, MapPin, Image as ImageIcon, Briefcase } from 'lucide-react';
+import { Settings as SettingsIcon, Trash2, Plus, Save, Building2, Mail, Phone, MapPin, Image as ImageIcon, Briefcase, AlertOctagon } from 'lucide-react';
 import { useToast } from './ui/ToastProvider';
 import { useConfirm } from './ui/ConfirmProvider';
 
@@ -109,6 +109,19 @@ const Settings = () => {
         setFormData({ ...formData, logo: reader.result });
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleFactoryReset = async () => {
+    const confirmed = await confirm({
+      title: 'FACTORY RESET',
+      message: 'This will PERMANENTLY DELETE all local data, profiles, and settings from this device. THIS CANNOT BE UNDONE. Are you absolutely sure?'
+    });
+    
+    if (confirmed) {
+      localStorage.clear();
+      toast('System reset complete. Restarting...', 'success');
+      setTimeout(() => window.location.reload(), 1500);
     }
   };
 
@@ -303,7 +316,7 @@ const Settings = () => {
                 {profile.logo ? (
                   <img src={profile.logo} alt={profile.name} className="max-h-full max-w-full object-contain" />
                 ) : (
-                  <div className="w-full h-full bg-black rounded-2xl flex items-center justify-center text-white font-black text-2xl tracking-tighter italic">DR</div>
+                  <div className="w-full h-full bg-black rounded-2xl flex items-center justify-center text-white font-black text-2xl tracking-tighter italic">BS</div>
                 )}
               </div>
               <div className="min-w-0">
@@ -352,14 +365,14 @@ const Settings = () => {
           <div className="bg-gray-50 rounded-2xl p-6 mb-8 border border-gray-100 grid grid-cols-1 md:grid-cols-3 gap-6">
             <input 
               type="text" 
-              placeholder="Item name (e.g. Wedding Shoot)"
+              placeholder="e.g. Service Name"
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold outline-none bg-white"
               value={itemForm.name}
               onChange={(e) => setItemForm({...itemForm, name: e.target.value})}
             />
             <input 
               type="number" 
-              placeholder="Price"
+              placeholder="e.g. 1000"
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold outline-none bg-white"
               value={itemForm.price}
               onChange={(e) => setItemForm({...itemForm, price: e.target.value})}
@@ -401,6 +414,27 @@ const Settings = () => {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Danger Zone */}
+      <div className="mt-12 bg-red-50/50 border border-red-100 rounded-[2.5rem] p-10 mb-12">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <AlertOctagon className="text-red-500" size={24} />
+              <h3 className="text-xl font-black text-red-900 uppercase tracking-widest italic">Danger Zone</h3>
+            </div>
+            <p className="text-sm font-bold text-red-700/60 max-w-xl">
+              Perform a full factory reset. This will clear all business profiles, invoice history, and local settings. Data synced to Google Drive will remain safe in the cloud.
+            </p>
+          </div>
+          <button 
+            onClick={handleFactoryReset}
+            className="shrink-0 bg-red-600 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-red-700 transition-all shadow-xl active:scale-95"
+          >
+            Factory Reset App
+          </button>
         </div>
       </div>
       </div>

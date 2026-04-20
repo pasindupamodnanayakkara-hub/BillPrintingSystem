@@ -244,7 +244,7 @@ const InvoiceGenerator = () => {
           <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/80 sticky top-0 z-10 backdrop-blur-sm">
             <div>
               <h2 className="text-xl font-bold text-gray-800">Bill Generator</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Studio Darkroom Professional</p>
+              <p className="text-xs text-gray-400 mt-0.5">Professional Billing Platform</p>
             </div>
           </div>
 
@@ -297,7 +297,7 @@ const InvoiceGenerator = () => {
                               {p.name}
                             </span>
                             <span className={`text-[9px] font-bold uppercase tracking-wider ${selectedProfileId === p.id ? 'text-accent-gold/80' : 'text-gray-400'}`}>
-                              {p.id === 'studio-dark-room' ? 'Primary Office' : 'Business Unit'}
+                               Business Identity
                             </span>
                           </div>
                         </div>
@@ -521,7 +521,7 @@ const InvoiceGenerator = () => {
                 </div>
                 <div className="text-right">
                   <div className="flex flex-col items-end gap-3 mb-4">
-                    <h1 className="text-5xl font-black text-gray-900 tracking-tighter italic uppercase truncate max-w-[500px] pr-4 leading-none">{invoiceData.companyName}</h1>
+                    <h1 className="text-5xl font-black text-gray-900 tracking-tighter italic uppercase truncate max-w-[500px] pr-4 leading-none">{invoiceData.companyName || 'YOUR STUDIO'}</h1>
                     <div className={`px-4 py-1.5 rounded-full text-[0.625rem] font-black uppercase tracking-[0.2em] border shadow-sm ${
                       invoiceData.paymentStatus === 'Paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                       invoiceData.paymentStatus === 'Partially Paid' ? 'bg-amber-50 text-amber-600 border-amber-100' :
@@ -576,7 +576,7 @@ const InvoiceGenerator = () => {
                   {invoiceData.items.map((item, i) => (
                     <div key={item.id} className={`grid grid-cols-12 py-5 px-6 ${i !== invoiceData.items.length - 1 ? 'border-b border-gray-50' : ''} hover:bg-gray-50/50 transition-colors`}>
                       <div className="col-span-6">
-                        <p className="text-sm font-bold text-gray-800">{item.description || 'General Photography Service'}</p>
+                        <p className="text-sm font-bold text-gray-800">{item.description || 'General Professional Service'}</p>
                       </div>
                       <div className="col-span-2 text-sm font-bold text-gray-600 text-center">{item.qty}</div>
                       <div className="col-span-2 text-sm font-bold text-gray-600 text-right">{cur}{Number(item.price).toLocaleString()}</div>
