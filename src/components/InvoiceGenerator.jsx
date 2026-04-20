@@ -1,12 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Trash2, Printer, ArrowLeft, Cloud, Settings, CheckCircle, AlertCircle } from 'lucide-react';
-import { useGoogleLogin } from '@react-oauth/google';
+import { Trash2, Printer, ArrowLeft, Settings } from 'lucide-react';
 import { getSettings } from '../config/settings';
 import { getProfiles } from '../config/profiles';
 import defaultLogo from '../assets/logo.png';
-import { backupToSheets } from '../services/googleSheets';
-import { GOOGLE_CLIENT_ID } from '../config/constants';
-import { getNextInvoiceNumber, saveBill, getBillHistory } from '../services/billService';
+import { getNextInvoiceNumber, saveBill } from '../services/billService';
 import { getInventory } from '../services/inventoryService';
 import { useToast } from './ui/ToastProvider';
 
@@ -44,59 +41,7 @@ const InvoiceGenerator = () => {
     return () => window.removeEventListener('resize', updateScale);
   }, []);
 
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncStatus, setSyncStatus] = useState(null); // 'success' | 'error' | null
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
-  // Hidden Auto-Backup logic that relies on Electron session cookies
-  useEffect(() => {
-    const checkAutoBackup = async () => {
-      // Use Electron renderer if available
-      const ipcRenderer = window?.require ? window.require('electron').ipcRenderer : null;
-      if (!ipcRenderer) return;
-
-      const savedSettings = JSON.parse(localStorage.getItem('BILL_STUDIO_SETTINGS') || '{}');
-      const frequency = savedSettings.backupFrequency || 'Never';
-      if (frequency === 'Never') return;
-
-      const lastBackup = localStorage.getItem('LAST_BACKUP_DATE');
-      const now = new Date().getTime();
-      const oneDay = 24 * 60 * 60 * 1000;
-      
-      let shouldBackup = false;
-      if (!lastBackup) {
-        shouldBackup = true;
-      } else {
-        const diff = now - parseInt(lastBackup, 10);
-        if (frequency === 'Daily' && diff >= oneDay) shouldBackup = true;
-        if (frequency === 'Weekly' && diff >= oneDay * 7) shouldBackup = true;
-        if (frequency === 'Monthly' && diff >= oneDay * 30) shouldBackup = true;
-      }
-
-      if (shouldBackup) {
-        console.log('Automated background backup triggered...');
-        try {
-          const localClientId = localStorage.getItem('GOOGLE_CLIENT_ID') || GOOGLE_CLIENT_ID;
-          if (!localClientId) return;
-          
-          // Use the silent flag. If the user's Electron session is already logged into Google,
-          // it will fetch an access token completely invisibly without any pop-ups.
-          const accessToken = await ipcRenderer.invoke('google-oauth', { clientId: localClientId, silent: true });
-          
-          const history = getBillHistory();
-          if (history.length > 0) {
-            await backupToSheets(accessToken, history[0]); 
-            localStorage.setItem('LAST_BACKUP_DATE', String(now));
-            console.log('Silent Google Drive backup succeeded!');
-          }
-        } catch (e) {
-          console.warn('Silent auto backup failed', e.message);
-        }
-      }
-    };
-    
-    checkAutoBackup();
-  }, []);
 
   const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
@@ -120,7 +65,7 @@ const InvoiceGenerator = () => {
     discount: 0,
     discountType: 'amount', // 'amount' or 'percentage'
     items: [
-      { id: Date.now(), description: '', qty: 1, price: 0 }
+      { id: 1, description: '', qty: 1, price: 0 }
     ],
     notes: '',
     paymentStatus: 'Awaiting Payment'
@@ -239,61 +184,7 @@ const InvoiceGenerator = () => {
     }
   };
 
-  const login = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      setIsSyncing(true);
-      setSyncStatus(null);
-      try {
-        await backupToSheets(tokenResponse.access_token, {
-          ...invoiceData,
-          subtotal,
-          taxAmount,
-          total
-        });
-        setSyncStatus('success');
-        setTimeout(() => setSyncStatus(null), 3000);
-      } catch (err) {
-        setSyncStatus('error');
-        console.error(err);
-      } finally {
-        setIsSyncing(false);
-      }
-    },
-    scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file',
-    prompt: 'select_account',
-  });
 
-  const handleBackup = async () => {
-    const localClientId = localStorage.getItem('GOOGLE_CLIENT_ID') || GOOGLE_CLIENT_ID;
-    if (!localClientId) {
-      console.error('Google Client ID is missing. Cannot proceed with backup.');
-      return;
-    }
-    
-    const ipcRenderer = window?.require ? window.require('electron').ipcRenderer : null;
-    if (ipcRenderer) {
-      setIsSyncing(true);
-      setSyncStatus(null);
-      try {
-        const accessToken = await ipcRenderer.invoke('google-oauth', { clientId: localClientId, silent: false });
-        await backupToSheets(accessToken, {
-          ...invoiceData,
-          subtotal,
-          taxAmount,
-          total,
-        });
-        setSyncStatus('success');
-        setTimeout(() => setSyncStatus(null), 3000);
-      } catch (err) {
-        console.error('OAuth/backup error:', err);
-        setSyncStatus('error');
-      } finally {
-        setIsSyncing(false);
-      }
-    } else {
-      login();
-    }
-  };
 
   return (
     <>
@@ -588,30 +479,6 @@ const InvoiceGenerator = () => {
               <p className="text-xs text-gray-400">High-fidelity print rendering</p>
             </div>
             <div className="flex items-center gap-3">
-              <button
-                onClick={handleBackup}
-                disabled={isSyncing}
-                className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold transition-all shadow-xl active:scale-95 ${
-                  syncStatus === 'success' ? 'bg-green-500 text-white shadow-green-200' :
-                  syncStatus === 'error' ? 'bg-red-500 text-white shadow-red-200' :
-                  'bg-white text-gray-800 border-2 border-gray-100 hover:border-accent-gold'
-                }`}
-              >
-                {isSyncing ? (
-                  <div className="w-5 h-5 border-2 border-gray-300 border-t-accent-gold rounded-full animate-spin" />
-                ) : syncStatus === 'success' ? (
-                  <CheckCircle size={20} />
-                ) : syncStatus === 'error' ? (
-                  <AlertCircle size={20} />
-                ) : (
-                  <Cloud size={20} className="text-blue-500" />
-                )}
-                {isSyncing ? 'Syncing...' : 
-                 syncStatus === 'success' ? 'Backed Up!' : 
-                 syncStatus === 'error' ? 'Failed!' : 
-                 'Sync to Drive'}
-              </button>
-
               <button
                 onClick={handlePrint}
                 className="flex items-center gap-3 bg-black text-white px-8 py-3 rounded-2xl text-sm font-bold hover:bg-gray-900 transition-all shadow-xl shadow-black/10 active:scale-95 hover:shadow-accent-gold/20"

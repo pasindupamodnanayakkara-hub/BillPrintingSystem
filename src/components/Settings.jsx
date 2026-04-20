@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { getProfiles, addProfile, updateProfile, deleteProfile } from '../config/profiles';
 import { getInventory, addItem, updateItem, deleteItem } from '../services/inventoryService';
 import { Settings as SettingsIcon, Trash2, Plus, Save, Building2, Mail, Phone, MapPin, Image as ImageIcon, Briefcase } from 'lucide-react';
@@ -8,7 +8,7 @@ import { useConfirm } from './ui/ConfirmProvider';
 const Settings = () => {
   const { toast } = useToast();
   const { confirm } = useConfirm();
-  const [profiles, setProfiles] = useState([]);
+  const [profiles, setProfiles] = useState(() => getProfiles());
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -18,30 +18,19 @@ const Settings = () => {
     logo: ''
   });
   
-  const [appSettings, setAppSettings] = useState({
-    invoicePrefix: 'INV-',
-    invoiceCounter: '1000',
-    backupFrequency: 'Never'
+  const [appSettings, setAppSettings] = useState(() => {
+    const savedSettings = JSON.parse(localStorage.getItem('BILL_STUDIO_SETTINGS') || '{}');
+    const savedCounter = localStorage.getItem('BILL_COUNTER') || '1000';
+    return {
+      invoicePrefix: savedSettings.invoicePrefix || 'INV-',
+      invoiceCounter: savedCounter
+    };
   });
 
   const [isDragging, setIsDragging] = useState(false);
-  const [inventory, setInventory] = useState([]);
+  const [inventory, setInventory] = useState(() => getInventory());
   const [editingItem, setEditingItem] = useState(null);
   const [itemForm, setItemForm] = useState({ name: '', price: '' });
-
-  useEffect(() => {
-    const loadedProfiles = getProfiles();
-    setProfiles(loadedProfiles);
-    
-    const savedSettings = JSON.parse(localStorage.getItem('BILL_STUDIO_SETTINGS') || '{}');
-    const savedCounter = localStorage.getItem('BILL_COUNTER') || '1000';
-    setAppSettings({
-      invoicePrefix: savedSettings.invoicePrefix || 'INV-',
-      invoiceCounter: savedCounter,
-      backupFrequency: savedSettings.backupFrequency || 'Never'
-    });
-    setInventory(getInventory());
-  }, []);
 
   const handleEdit = (profile) => {
     setEditingId(profile.id);
@@ -51,8 +40,7 @@ const Settings = () => {
   const handleSave = () => {
     if (editingId === 'system') {
       localStorage.setItem('BILL_STUDIO_SETTINGS', JSON.stringify({
-        invoicePrefix: appSettings.invoicePrefix,
-        backupFrequency: appSettings.backupFrequency
+        invoicePrefix: appSettings.invoicePrefix
       }));
       localStorage.setItem('BILL_COUNTER', appSettings.invoiceCounter);
       setEditingId(null);
@@ -135,7 +123,7 @@ const Settings = () => {
         <div className="flex gap-3">
           <button 
             onClick={() => setEditingId('system')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all shadow-lg active:scale-95 ${editingId === 'system' ? 'bg-accent-gold text-white' : 'bg-white text-gray-700 border border-gray-100 hover:border-accent-gold'}`}
+            className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black transition-all shadow-xl active:scale-95 ${editingId === 'system' ? 'bg-black text-white ring-4 ring-black/10' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-black'}`}
           >
             <SettingsIcon size={18} />
             System Settings
@@ -298,19 +286,6 @@ const Settings = () => {
                 value={appSettings.invoiceCounter}
                 onChange={(e) => setAppSettings({...appSettings, invoiceCounter: e.target.value})}
               />
-            </div>
-            <div className="relative">
-              <label className="text-[10px] absolute -top-2 left-3 bg-white px-1 font-bold text-gray-400 z-10 uppercase tracking-wider">Backup Frequency</label>
-              <select 
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold focus:border-accent-gold outline-none bg-white appearance-none"
-                value={appSettings.backupFrequency}
-                onChange={(e) => setAppSettings({...appSettings, backupFrequency: e.target.value})}
-              >
-                <option>Never</option>
-                <option>Daily</option>
-                <option>Weekly</option>
-                <option>Monthly</option>
-              </select>
             </div>
           </div>
           <div className="mt-8 flex gap-4 justify-end">

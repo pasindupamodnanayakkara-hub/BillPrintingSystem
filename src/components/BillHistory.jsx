@@ -1,57 +1,50 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Download, RefreshCw, FileText, Calendar, User, CreditCard } from 'lucide-react';
-import { getBillHistory, restoreHistory, deleteBill } from '../services/billService';
-import { fetchBillsFromSheets } from '../services/googleSheets';
-import { GOOGLE_CLIENT_ID } from '../config/constants';
+import { Search, Download, FileText, Calendar, User, CreditCard } from 'lucide-react';
+import { getBillHistory, deleteBill } from '../services/billService';
+import { uploadEncryptedBackup } from '../services/googleDriveService';
+import { encryptBackup } from '../services/encryptionService';
 import { useToast } from './ui/ToastProvider';
 import { useConfirm } from './ui/ConfirmProvider';
-import { Trash2, X } from 'lucide-react';
+import { Trash2, X, RefreshCw, Cloud } from 'lucide-react';
 
-const ipcRenderer = window?.require ? window.require('electron').ipcRenderer : null;
 
 const BillHistory = () => {
   const { toast } = useToast();
   const { confirm: runConfirm } = useConfirm();
   const [bills, setBills] = useState([]);
   const [search, setSearch] = useState('');
-  const [isRestoring, setIsRestoring] = useState(false);
   const [selectedBill, setSelectedBill] = useState(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     setBills(getBillHistory());
   }, []);
 
-  const handleRestore = async () => {
-    if (!ipcRenderer) {
-      toast('Restore works only inside the desktop app.', 'error');
+  const handleManualBackup = async () => {
+    const token = localStorage.getItem('GOOGLE_ACCESS_TOKEN');
+    if (!token) {
+      toast('Please connect your Google account in the "Cloud Backup" tab first.', 'info');
       return;
     }
 
-    const confirmed = await runConfirm({
-      title: 'Restore Data',
-      message: 'This will overwrite your local history with data from Google Drive. Do you want to continue?'
-    });
-    if (!confirmed) return;
-
-    setIsRestoring(true);
+    setIsSyncing(true);
     try {
-      const accessToken = await ipcRenderer.invoke('google-oauth', GOOGLE_CLIENT_ID);
-      const remoteBills = await fetchBillsFromSheets(accessToken);
-      if (remoteBills && remoteBills.length > 0) {
-        restoreHistory(remoteBills);
-        setBills(getBillHistory());
-        toast(`Successfully restored ${remoteBills.length} bills!`, 'success');
-      } else {
-        toast('No backup found on Google Drive.', 'info');
+      const history = getBillHistory();
+      if (history.length === 0) {
+        toast('No bills found to backup.', 'info');
+        return;
       }
+      const encryptedData = await encryptBackup(history);
+      await uploadEncryptedBackup(token, encryptedData);
+      localStorage.setItem('LAST_BACKUP_DATE', String(Date.now()));
+      toast('Cloud backup successful!', 'success');
     } catch (err) {
-      console.error('Restore failed:', err);
-      toast('Restore failed. Please check your internet connection.', 'error');
+      console.error('Manual backup error:', err);
+      toast('Backup failed. Check your connection.', 'error');
     } finally {
-      setIsRestoring(false);
+      setIsSyncing(false);
     }
   };
-
   const handleDelete = async (e, id, invoiceNumber) => {
     e.stopPropagation(); // Prevent opening modal
     const confirmed = await runConfirm({
@@ -92,14 +85,31 @@ const BillHistory = () => {
             />
           </div>
 
-          <button
-            onClick={handleRestore}
-            disabled={isRestoring}
-            className="flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-xl text-sm font-bold hover:bg-gray-900 transition-all shadow-lg active:scale-95 disabled:opacity-50"
-          >
-            {isRestoring ? <RefreshCw size={16} className="animate-spin" /> : <Download size={16} />}
-            {isRestoring ? 'Restoring...' : 'Restore from Drive'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleManualBackup}
+              disabled={isSyncing}
+              className="flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-900 transition-all shadow-lg active:scale-95 disabled:opacity-50"
+            >
+              {isSyncing ? <RefreshCw size={14} className="animate-spin" /> : <Cloud size={14} className="text-blue-400" />}
+              {isSyncing ? 'Syncing...' : 'Backup Now'}
+            </button>
+            <button 
+              className="flex items-center gap-2 px-6 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-50 transition-all shadow-sm active:scale-95"
+              onClick={() => {
+                const csv = bills.map(b => `${b.invoiceDate},${b.invoiceNumber},${b.clientName},${b.total}`).join('\n');
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `bill-history-${new Date().toLocaleDateString()}.csv`;
+                a.click();
+              }}
+            >
+              <Download size={14} />
+              Export
+            </button>
+          </div>
         </div>
       </div>
 

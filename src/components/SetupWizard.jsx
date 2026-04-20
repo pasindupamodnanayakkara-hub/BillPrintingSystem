@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CheckCircle2, CloudDownload, Building2, ChevronRight, ChevronLeft, ShieldCheck, Rocket } from 'lucide-react';
-import { fetchBillsFromSheets } from '../services/googleSheets';
+import { downloadEncryptedBackup } from '../services/googleDriveService';
+import { decryptBackup } from '../services/encryptionService';
 import { GOOGLE_CLIENT_ID } from '../config/constants';
 import { restoreHistory } from '../services/billService';
 import { addProfile } from '../config/profiles';
@@ -27,19 +28,30 @@ const SetupWizard = ({ onComplete }) => {
   const handleRestore = async () => {
     setIsRestoring(true);
     try {
-      const accessToken = await ipcRenderer.invoke('google-oauth', GOOGLE_CLIENT_ID);
-      const bills = await fetchBillsFromSheets(accessToken);
-      if (bills && bills.length > 0) {
-        restoreHistory(bills);
+      const accessToken = await ipcRenderer.invoke('google-oauth', { clientId: GOOGLE_CLIENT_ID, silent: false });
+      
+      // 1. Download encrypted file
+      const encryptedData = await downloadEncryptedBackup(accessToken);
+      
+      if (encryptedData) {
+        // 2. Decrypt
+        const cloudBills = await decryptBackup(encryptedData);
+        
+        // 3. Restore
+        restoreHistory(cloudBills);
         localStorage.setItem('BILL_STUDIO_SETUP_COMPLETE', 'true');
         onComplete();
       } else {
-        toast('No backup found on your Google Drive. Please start a fresh setup.', 'warning');
+        toast('No secure backup found on your Google Drive. Please start a fresh setup.', 'warning');
         nextStep();
       }
     } catch (error) {
       console.error('Restore failed', error);
-      toast('Failed to connect to Google Drive.', 'error');
+      if (error.message === 'CORRUPT_OR_WRONG_KEY') {
+        toast('Failed to decrypt. This backup might be from a different system.', 'error');
+      } else {
+        toast('Failed to connect to Google Drive.', 'error');
+      }
     } finally {
       setIsRestoring(false);
     }

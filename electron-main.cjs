@@ -49,8 +49,9 @@ ipcMain.on('close-window', () => {
 // ─── Google OAuth IPC Handler ────────────────────────────────────────────────
 ipcMain.handle('google-oauth', async (event, { clientId, silent = false }) => {
   const scope = [
-    'https://www.googleapis.com/auth/spreadsheets',
-    'https://www.googleapis.com/auth/drive.file',
+    'https://www.googleapis.com/auth/drive.appdata',
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
   ].join(' ');
 
   // Silent Auth stays in internal window to avoid popping browser
