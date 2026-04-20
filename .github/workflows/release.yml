@@ -31,4 +31,5 @@ jobs:
       - name: Build & Publish to Users
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run electron:publish
