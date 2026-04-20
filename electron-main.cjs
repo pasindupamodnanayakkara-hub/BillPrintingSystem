@@ -78,7 +78,6 @@ ipcMain.handle('google-oauth', async (event, { clientId, silent = false }) => {
       `&scope=${encodeURIComponent(scope)}` +
       `&prompt=none`;
 
-    if (mainWindow) mainWindow.webContents.send('oauth-debug', { type: 'silent', url: authUrl, redirectUri });
 
     return new Promise((resolve, reject) => {
       const authWin = new BrowserWindow({
@@ -161,7 +160,6 @@ ipcMain.handle('google-oauth', async (event, { clientId, silent = false }) => {
         `&scope=${encodeURIComponent(scope)}` +
         `&prompt=select_account consent`;
       
-      if (mainWindow) mainWindow.webContents.send('oauth-debug', { type: 'interactive', url: authUrl, redirectUri });
       shell.openExternal(authUrl);
     });
 
