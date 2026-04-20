@@ -1,7 +1,7 @@
 {
   "name": "billprintingsystem",
   "private": true,
-  "version": "1.0.2",
+  "version": "1.0.0",
   "type": "module",
   "main": "electron-main.cjs",
   "author": "Infixa Digital",
@@ -22,6 +22,8 @@
     "directories": {
       "output": "release"
     },
+    "compression": "maximum",
+    "asar": true,
     "files": [
       "dist/**/*",
       "electron-main.cjs"
@@ -41,8 +43,6 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Bill Studio",
       "runAfterFinish": true,
-      "compression": "maximum",
-      "asar": true,
       "differentialPackage": true,
       "deleteAppDataOnUninstall": false,
       "unicode": true
