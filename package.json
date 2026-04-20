@@ -42,9 +42,6 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Bill Studio",
       "runAfterFinish": true,
-      "installerHeader": "build/installerHeader.bmp",
-      "installerSidebar": "build/installerSidebar.bmp",
-      "uninstallerSidebar": "build/installerSidebar.bmp",
       "differentialPackage": true,
       "deleteAppDataOnUninstall": false,
       "unicode": true
